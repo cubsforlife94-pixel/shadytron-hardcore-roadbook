@@ -1039,6 +1039,650 @@ export const phases: Phase[] = [
   },
 ];
 
+export type GrindLane = 'Questing' | 'Skilling' | 'Slayer' | 'Bossing';
+
+export type GrindBreaker = {
+  id: string;
+  grind: 'Moons of Peril' | 'Dragon warhammer' | 'Skill training';
+  trigger: string;
+  title: string;
+  lane: GrindLane;
+  duration: string;
+  risk: Risk;
+  action: string;
+  payoff: string;
+  feeds: string[];
+  source?: string;
+};
+
+export const grindBreakers: GrindBreaker[] = [
+  {
+    id: 'pivot-moons-royals',
+    grind: 'Moons of Peril',
+    trigger: 'After 3 dry chests or the first “I’m forcing it” session',
+    title: 'Royal Titans duo reset',
+    lane: 'Bossing',
+    duration: '4–8 KC cap',
+    risk: 'danger',
+    action:
+      'Use the reliable duo you already trust. Set a hard KC cap before the trip, audit the bank first, and stop at the cap even if the scrolls do not appear.',
+    payoff:
+      'A different boss rhythm with real shots at Deadeye, Mystic Vigour, crown pieces and Twinflame upgrades.',
+    feeds: ['Prayer bridge', 'Team bossing reps', 'Future ToA/CoX switches'],
+    source: 'https://oldschool.runescape.wiki/w/Royal_Titans',
+  },
+  {
+    id: 'pivot-moons-quests',
+    grind: 'Moons of Peril',
+    trigger: 'When the log starts feeling like a second job',
+    title: 'Quest sprint: thralls or desert access',
+    lane: 'Questing',
+    duration: '1 quest chunk',
+    risk: 'danger',
+    action:
+      'Take one clean questing session: A Kingdom Divided → Dream Mentor, Lunar Diplomacy, or Beneath Cursed Sands. Stop after the quest reward and bank the supplies.',
+    payoff:
+      'Every break deposits raid value: greater thralls, Lunar utility, WGS progress or the ToA access gate.',
+    feeds: ['Greater thralls', 'WGS prerequisite chain', 'ToA access'],
+    source: 'https://oldschool.runescape.wiki/w/A_Kingdom_Divided',
+  },
+  {
+    id: 'pivot-moons-slayer',
+    grind: 'Moons of Peril',
+    trigger: 'When you want combat without another chest room',
+    title: 'One-task Slayer detour',
+    lane: 'Slayer',
+    duration: '1 task only',
+    risk: 'mixed',
+    action:
+      'Take one task, prioritize useful unlocks and supplies, then bank. Do not let a “refresh” silently become an all-night Slayer marathon.',
+    payoff:
+      'Moves the same 66 → 69 → 85 → 87 engine that supplies MM2, whip and trident milestones.',
+    feeds: ['MM2 access', 'Whip/trident path', 'Zenyte branch'],
+  },
+  {
+    id: 'pivot-dwh-herblore',
+    grind: 'Dragon warhammer',
+    trigger: 'After a defined shaman kill block feels mentally flat',
+    title: 'Herblore lab + Kingdom loop',
+    lane: 'Skilling',
+    duration: '45–90 minutes',
+    risk: 'noncombat',
+    action:
+      'Do a farm run, collect Kingdom resources, process secondaries and finish one potion batch. End with the next run planted so the loop keeps paying later.',
+    payoff:
+      'Directly closes the Herblore 57 → 65 WGS gap and builds toward the 78 raid-potion target.',
+    feeds: ['WGS Herblore gate', 'Raid potion bank', 'Long-term supply safety'],
+    source: 'https://oldschool.runescape.wiki/w/Ironman_Guide/Herblore',
+  },
+  {
+    id: 'pivot-dwh-royals',
+    grind: 'Dragon warhammer',
+    trigger: 'When you want PvM variety, not another shaman room',
+    title: 'Royal Titans team block',
+    lane: 'Bossing',
+    duration: '4–8 KC cap',
+    risk: 'danger',
+    action:
+      'Swap shamans for the trusted Royal Titans duo. Bring the same fixed abort rules, agree on the cap and bank immediately when the session ends.',
+    payoff:
+      'A meaningful prayer/staff upgrade lane that still improves team communication for raids.',
+    feeds: [
+      'Deadeye/Mystic Vigour',
+      'Team call discipline',
+      'CoX/ToA prayer coverage',
+    ],
+    source: 'https://oldschool.runescape.wiki/w/Royal_Titans',
+  },
+  {
+    id: 'pivot-dwh-quest',
+    grind: 'Dragon warhammer',
+    trigger: 'When the DWH rate is stealing your momentum',
+    title: 'One quest prerequisite cleared',
+    lane: 'Questing',
+    duration: '1 quest chunk',
+    risk: 'danger',
+    action:
+      'Clear exactly one WGS, Lunar/Dream Mentor, or Beneath Cursed Sands step. Treat the boss room as its own preflighted session, not a casual add-on.',
+    payoff:
+      'Converts a dry boss day into a permanent route unlock toward thralls, WGS or ToA.',
+    feeds: ['WGS access', 'Thralls', 'ToA gate'],
+    source: 'https://oldschool.runescape.wiki/w/While_Guthix_Sleeps',
+  },
+  {
+    id: 'pivot-skills-fight-caves',
+    grind: 'Skill training',
+    trigger: 'After two straight bank-standing or lap sessions',
+    title: 'Fight Caves mechanics deposit',
+    lane: 'Bossing',
+    duration: '1 prep + 1 attempt',
+    risk: 'status-safe',
+    action:
+      'Turn a combat-stat day into one focused cape attempt. Rehearse the wave plan, keep the exit rules explicit and stop after the attempt—win or reset cleanly.',
+    payoff:
+      'Fire Cape progress plus prayer discipline that improves every future dangerous room.',
+    feeds: ['Fire Cape', 'Prayer confidence', 'HCIM mechanics'],
+    source: 'https://oldschool.runescape.wiki/w/TzHaar_Fight_Cave',
+  },
+  {
+    id: 'pivot-skills-quests',
+    grind: 'Skill training',
+    trigger: 'When XP tracking starts replacing actual progress',
+    title: 'Quest reward sprint',
+    lane: 'Questing',
+    duration: '1 quest reward',
+    risk: 'danger',
+    action:
+      'Pick the highest-value unfinished quest in the current phase and finish only that one. Bank the reward, update the checklist and stop before decision fatigue returns.',
+    payoff:
+      'Progresses WGS, thralls, Lunar utility, prayer or ToA access without adding another repetitive training block.',
+    feeds: ['Quest gates', 'Future boss access', 'Raid readiness'],
+    source: 'https://oldschool.runescape.wiki/w/Optimal_quest_guide',
+  },
+  {
+    id: 'pivot-skills-moons',
+    grind: 'Skill training',
+    trigger: 'When you want a boss session with a finite endpoint',
+    title: 'Moon set mini-hunt',
+    lane: 'Bossing',
+    duration: '2–4 chests',
+    risk: 'danger',
+    action:
+      'Return to Moons with one set target chosen in advance. Stop at the chest cap even if the log stays dry; the win is a bounded boss session, not a forced green log.',
+    payoff:
+      'Keeps the green-log goal alive while supplying Eclipse, Blue Moon and Blood Moon upgrades for raids.',
+    feeds: ['13-slot Moons log', 'Three-style raid kit', 'Early CoX/ToA gear'],
+    source: 'https://oldschool.runescape.wiki/w/Moons_of_Peril/Strategies',
+  },
+];
+
+export type TrainingMethod = {
+  id: string;
+  name: string;
+  xpPerHour: number;
+  gpPerXp: number;
+  risk: Risk;
+  recommended?: boolean;
+  detail: string;
+  routeValue: string;
+};
+
+export type SkillPlan = {
+  id: string;
+  name: string;
+  current: number;
+  target: number;
+  targetLabel: string;
+  gate: string;
+  pivotNote: string;
+  methods: TrainingMethod[];
+};
+
+export const skillPlans: SkillPlan[] = [
+  {
+    id: 'ranged',
+    name: 'Ranged',
+    current: 72,
+    target: 75,
+    targetLabel: 'Eclipse + atlatl',
+    gate: '75 equips the Moon ranged package; 80 is the comfortable CoX contribution floor.',
+    pivotNote:
+      'If ranged training gets stale, swap to a one-task Slayer detour or a bounded Moons mini-hunt.',
+    methods: [
+      {
+        id: 'ranged-slayer',
+        name: 'Ranged Slayer tasks',
+        xpPerHour: 42000,
+        gpPerXp: 1,
+        risk: 'mixed',
+        recommended: true,
+        detail:
+          'Use safe task layouts and let combat XP advance the Slayer engine at the same time.',
+        routeValue: 'Slayer progress + ranged XP',
+      },
+      {
+        id: 'ranged-crabs',
+        name: 'Ammonite crabs + broad bolts',
+        xpPerHour: 55000,
+        gpPerXp: 4,
+        risk: 'noncombat',
+        detail:
+          'Low-attention fallback when you want predictable XP and no boss risk.',
+        routeValue: 'Fast 75 breakpoint',
+      },
+    ],
+  },
+  {
+    id: 'attack',
+    name: 'Attack',
+    current: 75,
+    target: 80,
+    targetLabel: 'CoX comfort floor',
+    gate: '80 is a comfort floor for consistent melee accuracy; it is not a hard first-CoX requirement.',
+    pivotNote:
+      'Use melee Slayer tasks as the default so the level also advances whip, trident and boss-task access.',
+    methods: [
+      {
+        id: 'attack-slayer',
+        name: 'Melee Slayer tasks',
+        xpPerHour: 35000,
+        gpPerXp: 0,
+        risk: 'mixed',
+        recommended: true,
+        detail:
+          'Train Attack on tasks where the drop table or task unlock matters; switch styles only for a defined reason.',
+        routeValue: 'Melee XP + Slayer drops',
+      },
+      {
+        id: 'attack-nmz',
+        name: 'NMZ absorption sessions',
+        xpPerHour: 70000,
+        gpPerXp: 2,
+        risk: 'status-safe',
+        detail:
+          'Fast, low-attention combat XP when you need a short level push without a live Hardcore death roll.',
+        routeValue: 'Fast comfort floor',
+      },
+    ],
+  },
+  {
+    id: 'strength',
+    name: 'Strength',
+    current: 82,
+    target: 85,
+    targetLabel: 'CoX comfort floor',
+    gate: '85 improves melee damage for CoX and later ToA; your 82 already supports early team raids.',
+    pivotNote:
+      'A single Slayer task is the healthiest detour; avoid turning a small combat gap into an endless NMZ block.',
+    methods: [
+      {
+        id: 'strength-slayer',
+        name: 'Strength-focused Slayer',
+        xpPerHour: 35000,
+        gpPerXp: 0,
+        risk: 'mixed',
+        recommended: true,
+        detail:
+          'Keep the account’s core task engine moving while adding the last few melee damage levels.',
+        routeValue: 'Strength + Slayer milestones',
+      },
+      {
+        id: 'strength-nmz',
+        name: 'NMZ absorption sessions',
+        xpPerHour: 70000,
+        gpPerXp: 2,
+        risk: 'status-safe',
+        detail:
+          'Efficient catch-up when you explicitly want XP and nothing else from the session.',
+        routeValue: 'Fast damage floor',
+      },
+    ],
+  },
+  {
+    id: 'defence',
+    name: 'Defence',
+    current: 75,
+    target: 80,
+    targetLabel: 'HCIM comfort floor',
+    gate: '80 adds defensive margin for CoX, Royal Titans and future dangerous bosses.',
+    pivotNote:
+      'Defensive Slayer or a short NMZ block is enough; keep the route focused on supplies and boss readiness.',
+    methods: [
+      {
+        id: 'defence-slayer',
+        name: 'Defence Slayer tasks',
+        xpPerHour: 35000,
+        gpPerXp: 0,
+        risk: 'mixed',
+        recommended: true,
+        detail:
+          'Pair the level with useful tasks and drops so the account keeps moving toward 85/87 Slayer.',
+        routeValue: 'Defence + Slayer milestones',
+      },
+      {
+        id: 'defence-nmz',
+        name: 'NMZ absorption sessions',
+        xpPerHour: 70000,
+        gpPerXp: 2,
+        risk: 'status-safe',
+        detail:
+          'Safe, predictable catch-up XP for a defined number of absorption runs.',
+        routeValue: 'Fast defensive floor',
+      },
+    ],
+  },
+  {
+    id: 'prayer',
+    name: 'Prayer',
+    current: 66,
+    target: 70,
+    targetLabel: 'Piety',
+    gate: '70 unlocks Piety and improves every future dangerous-content margin.',
+    pivotNote:
+      'Break up bone processing with a quest sprint or a status-safe Fight Caves attempt.',
+    methods: [
+      {
+        id: 'prayer-gilded',
+        name: 'Banked bones at Gilded altar',
+        xpPerHour: 230000,
+        gpPerXp: 6,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'The safer high-value route when you want to protect Hardcore status and keep the cost predictable.',
+        routeValue: 'Safe Piety unlock',
+      },
+      {
+        id: 'prayer-chaos',
+        name: 'Chaos Altar (Wilderness)',
+        xpPerHour: 350000,
+        gpPerXp: 1,
+        risk: 'wilderness',
+        detail:
+          'Best direct value, but the saved GP comes with player-killer and inventory risk.',
+        routeValue: 'Cheapest XP, highest risk',
+      },
+    ],
+  },
+  {
+    id: 'herblore',
+    name: 'Herblore',
+    current: 57,
+    target: 65,
+    targetLabel: 'WGS requirement',
+    gate: '65 clears the visible WGS gap; 78 later improves CoX potion independence.',
+    pivotNote:
+      'This is the ideal anti-burnout pivot from DWH: farm run, Kingdom, secondaries, then one potion batch.',
+    methods: [
+      {
+        id: 'herb-runs',
+        name: 'Herb runs + quest lamps',
+        xpPerHour: 18000,
+        gpPerXp: 0,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'Lowest direct cost; treat the “hour” as a weekly loop rather than a single sitting.',
+        routeValue: 'WGS XP at almost no GP cost',
+      },
+      {
+        id: 'herblore-potions',
+        name: 'Efficient potion batches',
+        xpPerHour: 30000,
+        gpPerXp: 7,
+        risk: 'noncombat',
+        detail:
+          'Process banked herbs and secondaries in defined batches so the skill cannot consume the whole session.',
+        routeValue: 'XP + raid supply bank',
+      },
+    ],
+  },
+  {
+    id: 'farming',
+    name: 'Farming',
+    current: 69,
+    target: 70,
+    targetLabel: 'SotE branch',
+    gate: '70 is the last visible Farming point for the optional Song of the Elves branch.',
+    pivotNote:
+      'Use a low-pressure herb/fruit-tree run as the reset between any two dangerous sessions.',
+    methods: [
+      {
+        id: 'farming-runs',
+        name: 'Herb + tree runs',
+        xpPerHour: 28000,
+        gpPerXp: 0,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'The account-friendly method: XP arrives in short loops while producing the herbs that power Herblore.',
+        routeValue: 'SotE gap + herb bank',
+      },
+      {
+        id: 'farming-contracts',
+        name: 'Farming contracts',
+        xpPerHour: 42000,
+        gpPerXp: 0,
+        risk: 'noncombat',
+        detail:
+          'Stack contracts with regular runs when you want more active planning and seed variety.',
+        routeValue: 'XP + seed pipeline',
+      },
+    ],
+  },
+  {
+    id: 'agility',
+    name: 'Agility',
+    current: 62,
+    target: 66,
+    targetLabel: 'WGS requirement',
+    gate: '66 clears WGS; 70 is the next account-wide quality-of-life sweep for Song of the Elves.',
+    pivotNote:
+      'After two lap sessions, use one quest reward or Fight Caves attempt as a bounded change of pace.',
+    methods: [
+      {
+        id: 'agility-rooftops',
+        name: 'Seers’ Village rooftops',
+        xpPerHour: 52000,
+        gpPerXp: 0,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'Reliable, cheap laps with marks of grace; ideal for a short 66 push.',
+        routeValue: 'WGS gap + graceful supplies',
+      },
+      {
+        id: 'agility-hallowed',
+        name: 'Hallowed Sepulchre floors',
+        xpPerHour: 65000,
+        gpPerXp: 0,
+        risk: 'danger',
+        detail:
+          'Higher focus and better long-term rewards; only use on the live HCIM after the floors are rehearsed.',
+        routeValue: 'XP + future stamina/loot',
+      },
+    ],
+  },
+  {
+    id: 'crafting',
+    name: 'Crafting',
+    current: 60,
+    target: 61,
+    targetLabel: 'Lunar Diplomacy',
+    gate: '61 opens Lunar Diplomacy; 70 later clears MM2 and starts the zenyte pipeline.',
+    pivotNote:
+      'A great noncombat reset from any boss grind: make one seaweed/sand batch, then stop.',
+    methods: [
+      {
+        id: 'crafting-glass',
+        name: 'Superglass Make + glassblowing',
+        xpPerHour: 85000,
+        gpPerXp: 5,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'Best iron-friendly mix of speed, cost and future utility; banked giant seaweed keeps it sustainable.',
+        routeValue: 'Lunar gate + zenyte runway',
+      },
+      {
+        id: 'crafting-jewellery',
+        name: 'Cut gems / jewellery batches',
+        xpPerHour: 65000,
+        gpPerXp: 2,
+        risk: 'noncombat',
+        detail:
+          'Use excess gems for a cheap, low-focus session that also supplies future jewellery.',
+        routeValue: 'XP + jewellery stock',
+      },
+    ],
+  },
+  {
+    id: 'magic',
+    name: 'Magic',
+    current: 75,
+    target: 76,
+    targetLabel: 'Greater thralls',
+    gate: '76 unlocks Greater Resurrection after A Kingdom Divided; 80 is the comfortable CoX floor.',
+    pivotNote:
+      'If casting becomes repetitive, turn the session into questing or a Slayer task instead of forcing another barrage block.',
+    methods: [
+      {
+        id: 'magic-slayer',
+        name: 'Bursting Slayer tasks',
+        xpPerHour: 80000,
+        gpPerXp: 24,
+        risk: 'danger',
+        recommended: true,
+        detail:
+          'The expensive option is justified when the task also advances Slayer and future raid drops.',
+        routeValue: 'Magic XP + Slayer engine',
+      },
+      {
+        id: 'magic-superglass',
+        name: 'Superglass Make sessions',
+        xpPerHour: 70000,
+        gpPerXp: 10,
+        risk: 'noncombat',
+        detail:
+          'Cheaper utility training that stacks with the Crafting seaweed/sand pipeline.',
+        routeValue: 'Magic XP + Crafting progress',
+      },
+    ],
+  },
+  {
+    id: 'smithing',
+    name: 'Smithing',
+    current: 67,
+    target: 70,
+    targetLabel: 'Dragon Slayer II',
+    gate: '70 is the short DS2 gap and supports the wider quest route.',
+    pivotNote:
+      'Use Giant’s Foundry as a finite contract-style session when combat grinds start to blur together.',
+    methods: [
+      {
+        id: 'smithing-foundry',
+        name: 'Giant’s Foundry contracts',
+        xpPerHour: 65000,
+        gpPerXp: 8,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'Low-to-moderate cost with useful mould unlocks and a clear start/stop point.',
+        routeValue: 'DS2 gate + Foundry unlocks',
+      },
+      {
+        id: 'smithing-balls',
+        name: 'Cannonballs between tasks',
+        xpPerHour: 18000,
+        gpPerXp: 0,
+        risk: 'noncombat',
+        detail:
+          'Very cheap AFK supply production; choose it when the goal is momentum rather than speed.',
+        routeValue: 'Cannonball bank + slow XP',
+      },
+    ],
+  },
+  {
+    id: 'fletching',
+    name: 'Fletching',
+    current: 64,
+    target: 70,
+    targetLabel: 'Scorching bow boost',
+    gate: '70 plus a +4 pie boost makes the Scorching bow branch available; 74 removes boost friction.',
+    pivotNote:
+      'A clean bank-standing reset from Moons, shamans or Royal Titans—stop after one defined stack.',
+    methods: [
+      {
+        id: 'fletching-maples',
+        name: 'Maple/yew bow batches',
+        xpPerHour: 90000,
+        gpPerXp: 1,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'Cheap and sustainable with your existing logs; string only the quantity you intend to finish.',
+        routeValue: 'Boost runway + alch stock',
+      },
+      {
+        id: 'fletching-darts',
+        name: 'Dart fletching',
+        xpPerHour: 150000,
+        gpPerXp: 5,
+        risk: 'noncombat',
+        detail:
+          'Fastest clean push, but reserve bars and feathers so the cost does not erase the benefit.',
+        routeValue: 'Fast optional bow branch',
+      },
+    ],
+  },
+  {
+    id: 'construction',
+    name: 'Construction',
+    current: 51,
+    target: 70,
+    targetLabel: 'Song of the Elves branch',
+    gate: '70 is the practical Song of the Elves comfort target; 83/84 later enables a premium house.',
+    pivotNote:
+      'Use Mahogany Homes between dangerous sessions when you want visible progress without another death roll.',
+    methods: [
+      {
+        id: 'construction-homes',
+        name: 'Mahogany Homes',
+        xpPerHour: 115000,
+        gpPerXp: 5,
+        risk: 'noncombat',
+        recommended: true,
+        detail:
+          'Best cost-conscious iron route with contracts, outfit progress and a natural session endpoint.',
+        routeValue: 'SotE branch + house utility',
+      },
+      {
+        id: 'construction-planks',
+        name: 'Oak/mahogany furniture',
+        xpPerHour: 220000,
+        gpPerXp: 10,
+        risk: 'noncombat',
+        detail:
+          'Use only when you have a deliberate cash and plank surplus; speed is not worth draining the bank casually.',
+        routeValue: 'Fastest house levels',
+      },
+    ],
+  },
+  {
+    id: 'slayer',
+    name: 'Slayer',
+    current: 66,
+    target: 69,
+    targetLabel: 'MM2 access',
+    gate: '69 opens MM2; 85/87 later add whip and trident to the raid kit.',
+    pivotNote:
+      'Slayer itself is the best combat pivot: one task, a hard stop, and a drop/XP deposit every session.',
+    methods: [
+      {
+        id: 'slayer-duradel',
+        name: 'Duradel/Konar task engine',
+        xpPerHour: 28000,
+        gpPerXp: 0,
+        risk: 'mixed',
+        recommended: true,
+        detail:
+          'Best route value: task-only drops, combat XP and a steady line toward MM2, whip and trident.',
+        routeValue: 'MM2 + whip + trident',
+      },
+      {
+        id: 'slayer-burst',
+        name: 'Burst high-value tasks',
+        xpPerHour: 52000,
+        gpPerXp: 20,
+        risk: 'danger',
+        detail:
+          'Spend runes only on tasks that materially accelerate the next milestone; do not burst for XP alone.',
+        routeValue: 'Fast Slayer levels + magic XP',
+      },
+    ],
+  },
+];
+
 export const gearItems: GearItem[] = [
   {
     id: 'gear-fighter-torso',

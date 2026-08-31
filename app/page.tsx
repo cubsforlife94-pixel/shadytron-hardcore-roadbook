@@ -21,6 +21,7 @@ import {
   RotateCcw,
   ShieldAlert,
   ShieldCheck,
+  Shuffle,
   Sparkles,
   Swords,
   Target,
@@ -64,9 +65,11 @@ import {
   baselineClaims,
   confirmedDefaults,
   gearItems,
+  grindBreakers,
   hardcorePreflight,
   moonsItems,
   phases,
+  skillPlans,
   sources,
   type GearItem,
   type Goal,
@@ -147,6 +150,12 @@ const moonGroups = [
     tint: 'eclipse',
     items: moonsItems.slice(8, 12),
   },
+] as const;
+
+const pivotGrinds = [
+  'Moons of Peril',
+  'Dragon warhammer',
+  'Skill training',
 ] as const;
 
 const raidGates = [
@@ -438,6 +447,26 @@ function GearCard({
   );
 }
 
+function xpForLevel(level: number) {
+  if (level <= 1) return 0;
+  let points = 0;
+  for (let index = 1; index < level; index += 1) {
+    points += Math.floor(index + 300 * 2 ** (index / 7));
+  }
+  return Math.floor(points / 4);
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(
+    Math.max(0, value),
+  );
+}
+
+function formatGpPerXp(value: number) {
+  if (value === 0) return 'Low direct cost';
+  return `≈ ${value} gp/xp`;
+}
+
 export default function Home() {
   const [completed, setCompleted] = useState<Set<string>>(
     () => new Set(confirmedDefaults),
@@ -446,14 +475,59 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('route');
   const [gearFilter, setGearFilter] =
     useState<(typeof gearFilters)[number]>('All');
+  const [pivotGrind, setPivotGrind] =
+    useState<(typeof pivotGrinds)[number]>('Moons of Peril');
+  const [queuedPivot, setQueuedPivot] = useState<string | null>(null);
+  const [selectedSkillId, setSelectedSkillId] = useState(skillPlans[0].id);
+  const [selectedSkillMethodId, setSelectedSkillMethodId] = useState(
+    skillPlans[0].methods.find((method) => method.recommended)?.id ??
+      skillPlans[0].methods[0].id,
+  );
+  const [skillTarget, setSkillTarget] = useState(skillPlans[0].target);
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved) as { completed?: string[] };
+        const parsed = JSON.parse(saved) as {
+          completed?: string[];
+          pivotGrind?: (typeof pivotGrinds)[number];
+          queuedPivot?: string | null;
+          selectedSkillId?: string;
+          selectedSkillMethodId?: string;
+          skillTarget?: number;
+        };
         if (Array.isArray(parsed.completed)) {
           setCompleted(new Set([...confirmedDefaults, ...parsed.completed]));
+        }
+        if (
+          pivotGrinds.includes(
+            parsed.pivotGrind as (typeof pivotGrinds)[number],
+          )
+        ) {
+          setPivotGrind(parsed.pivotGrind as (typeof pivotGrinds)[number]);
+        }
+        if (typeof parsed.queuedPivot === 'string') {
+          setQueuedPivot(parsed.queuedPivot);
+        }
+        const savedSkill = skillPlans.find(
+          (skill) => skill.id === parsed.selectedSkillId,
+        );
+        if (savedSkill) {
+          setSelectedSkillId(savedSkill.id);
+          setSkillTarget(
+            typeof parsed.skillTarget === 'number'
+              ? Math.min(99, Math.max(savedSkill.current, parsed.skillTarget))
+              : savedSkill.target,
+          );
+          const savedMethod = savedSkill.methods.find(
+            (method) => method.id === parsed.selectedSkillMethodId,
+          );
+          setSelectedSkillMethodId(
+            savedMethod?.id ??
+              savedSkill.methods.find((method) => method.recommended)?.id ??
+              savedSkill.methods[0].id,
+          );
         }
       }
     } catch {
@@ -467,9 +541,24 @@ export default function Home() {
     if (!loaded) return;
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ completed: Array.from(completed) }),
+      JSON.stringify({
+        completed: Array.from(completed),
+        pivotGrind,
+        queuedPivot,
+        selectedSkillId,
+        selectedSkillMethodId,
+        skillTarget,
+      }),
     );
-  }, [completed, loaded]);
+  }, [
+    completed,
+    loaded,
+    pivotGrind,
+    queuedPivot,
+    selectedSkillId,
+    selectedSkillMethodId,
+    skillTarget,
+  ]);
 
   const moonsComplete = moonsItems.every((item) => completed.has(item.id));
 
@@ -514,6 +603,40 @@ export default function Home() {
     .filter((item) => !moonsItems.some((moon) => moon.id === item.id))
     .filter((item) => gearFilter === 'All' || item.style === gearFilter);
 
+  const selectedSkill =
+    skillPlans.find((skill) => skill.id === selectedSkillId) ?? skillPlans[0];
+  const selectedSkillMethod =
+    selectedSkill.methods.find(
+      (method) => method.id === selectedSkillMethodId,
+    ) ??
+    selectedSkill.methods.find((method) => method.recommended) ??
+    selectedSkill.methods[0];
+  const skillXpRemaining = Math.max(
+    0,
+    xpForLevel(skillTarget) - xpForLevel(selectedSkill.current),
+  );
+  const skillHours = skillXpRemaining / selectedSkillMethod.xpPerHour;
+  const skillCost = skillXpRemaining * selectedSkillMethod.gpPerXp;
+  const skillProgress = Math.min(
+    100,
+    Math.round(
+      (xpForLevel(selectedSkill.current) /
+        Math.max(xpForLevel(skillTarget), 1)) *
+        100,
+    ),
+  );
+
+  const selectSkill = (id: string) => {
+    const skill = skillPlans.find((item) => item.id === id);
+    if (!skill) return;
+    setSelectedSkillId(skill.id);
+    setSkillTarget(skill.target);
+    setSelectedSkillMethodId(
+      skill.methods.find((method) => method.recommended)?.id ??
+        skill.methods[0].id,
+    );
+  };
+
   const openTab = (tab: string) => {
     setActiveTab(tab);
     window.setTimeout(() => {
@@ -526,9 +649,20 @@ export default function Home() {
 
   const resetProgress = () => {
     setCompleted(new Set(confirmedDefaults));
+    setPivotGrind('Moons of Peril');
+    setQueuedPivot(null);
+    selectSkill(skillPlans[0].id);
     window.localStorage.removeItem(STORAGE_KEY);
     setActiveTab('route');
   };
+
+  const pivotOptions = grindBreakers.filter(
+    (pivot) => pivot.grind === pivotGrind,
+  );
+
+  const queuedPivotOption = queuedPivot
+    ? grindBreakers.find((pivot) => pivot.id === queuedPivot)
+    : undefined;
 
   const markCurrent = () => {
     if (!current) return;
@@ -773,6 +907,12 @@ export default function Home() {
               <TabsTrigger value="route" className="h-9 min-w-24 px-3">
                 <Map /> Route
               </TabsTrigger>
+              <TabsTrigger value="pivots" className="h-9 min-w-24 px-3">
+                <Shuffle /> Pivots
+              </TabsTrigger>
+              <TabsTrigger value="skills" className="h-9 min-w-24 px-3">
+                <Gauge /> Skills
+              </TabsTrigger>
               <TabsTrigger value="arsenal" className="h-9 min-w-24 px-3">
                 <PackageCheck /> Arsenal
               </TabsTrigger>
@@ -979,6 +1119,505 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
+                </section>
+              </aside>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="pivots">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-5">
+                <section className="rounded-[26px] border border-primary/15 bg-primary/[.035] p-5 shadow-2xl shadow-black/15 sm:p-7">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className="bg-primary text-primary-foreground">
+                          ANTI-BURNOUT CIRCUIT
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="border-white/10 bg-white/[.025] text-muted-foreground"
+                        >
+                          Same destination · different lane
+                        </Badge>
+                      </div>
+                      <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+                        Swap the activity. Keep the destination.
+                      </h2>
+                      <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+                        When a grind starts feeling like a tax, take one bounded
+                        pivot. Every card below changes the activity while still
+                        paying into Shadytron’s raid route. Queue one for your
+                        next session, then return to the main route when the
+                        capsule is complete.
+                      </p>
+                    </div>
+                    <Shuffle className="hidden size-8 shrink-0 text-primary sm:block" />
+                  </div>
+
+                  <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
+                    {pivotGrinds.map((grind) => (
+                      <Button
+                        key={grind}
+                        variant={pivotGrind === grind ? 'secondary' : 'outline'}
+                        onClick={() => setPivotGrind(grind)}
+                        className={`h-10 shrink-0 rounded-xl px-4 text-xs ${
+                          pivotGrind === grind
+                            ? 'border-primary/25 bg-primary/15 text-primary'
+                            : 'border-white/10 bg-white/[.02]'
+                        }`}
+                      >
+                        {grind}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Current grind:{' '}
+                    <span className="text-primary">{pivotGrind}</span>
+                  </p>
+                </section>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {pivotOptions.map((pivot) => {
+                    const queued = queuedPivot === pivot.id;
+                    return (
+                      <article
+                        key={pivot.id}
+                        className={`flex min-h-[330px] flex-col rounded-[22px] border p-5 transition-all sm:p-6 ${
+                          queued
+                            ? 'border-primary/35 bg-primary/[.06] shadow-[0_14px_40px_rgba(0,0,0,.18)]'
+                            : 'border-white/8 bg-card/55 hover:border-white/15 hover:bg-card/70'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className="h-6 border-white/10 bg-white/[.025] font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
+                            >
+                              {pivot.lane}
+                            </Badge>
+                            <RiskBadge risk={pivot.risk} compact />
+                          </div>
+                          <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-primary">
+                            {pivot.duration}
+                          </span>
+                        </div>
+
+                        <h3 className="mt-5 text-lg font-semibold tracking-[-0.02em]">
+                          {pivot.title}
+                        </h3>
+                        <p className="mt-2 text-xs leading-5 text-primary/85">
+                          {pivot.trigger}
+                        </p>
+                        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                          {pivot.action}
+                        </p>
+
+                        <div className="mt-4 rounded-xl border border-emerald-300/10 bg-emerald-300/[.035] p-3">
+                          <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-emerald-200/70">
+                            Why it still counts
+                          </p>
+                          <p className="mt-1.5 text-xs leading-5 text-emerald-100/80">
+                            {pivot.payoff}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-1.5">
+                          {pivot.feeds.map((feed) => (
+                            <span
+                              key={feed}
+                              className="rounded-full border border-white/8 bg-white/[.025] px-2 py-1 font-mono text-[8px] uppercase tracking-[0.1em] text-muted-foreground"
+                            >
+                              {feed}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+                          <Button
+                            variant={queued ? 'secondary' : 'outline'}
+                            onClick={() =>
+                              setQueuedPivot(queued ? null : pivot.id)
+                            }
+                            className={`h-9 rounded-xl text-xs ${
+                              queued
+                                ? 'bg-primary/15 text-primary hover:bg-primary/20'
+                                : 'border-white/10 bg-white/[.025]'
+                            }`}
+                          >
+                            {queued ? <Check /> : <Shuffle />}
+                            {queued ? 'Queued next' : 'Queue this pivot'}
+                          </Button>
+                          {pivot.source && (
+                            <a
+                              href={pivot.source}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[.05] hover:text-primary"
+                              aria-label={`Open source for ${pivot.title}`}
+                            >
+                              <ExternalLink className="size-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+                <section className="rounded-[22px] border border-cyan-200/12 bg-cyan-200/[.025] p-5">
+                  <div className="flex items-center gap-2 text-cyan-200">
+                    <TimerReset className="size-4" />
+                    <p className="font-mono text-[8px] uppercase tracking-[0.16em]">
+                      Queued next
+                    </p>
+                  </div>
+                  {queuedPivotOption ? (
+                    <>
+                      <h3 className="mt-4 text-lg font-semibold">
+                        {queuedPivotOption.title}
+                      </h3>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        {queuedPivotOption.duration} · {queuedPivotOption.lane}
+                      </p>
+                      <p className="mt-3 text-xs leading-5 text-foreground/75">
+                        Finish the capsule, bank, then return to the Route tab
+                        with the new progress deposit.
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setQueuedPivot(null)}
+                        className="mt-3 h-8 px-2 text-xs text-muted-foreground hover:text-primary"
+                      >
+                        Clear queue <RotateCcw />
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                      Nothing queued. Pick a grind above, then queue one finite
+                      lane for the next time your main activity feels stale.
+                    </p>
+                  )}
+                </section>
+
+                <section className="rounded-[22px] border border-white/8 bg-white/[.022] p-5">
+                  <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-muted-foreground">
+                    The three-part rotation ritual
+                  </p>
+                  <div className="mt-4 space-y-4">
+                    {[
+                      [
+                        '01',
+                        'Set the cap',
+                        'One task, one quest, 4–8 KC, or 45–90 minutes.',
+                      ],
+                      [
+                        '02',
+                        'Make a deposit',
+                        'End with a drop, level, quest reward or supply batch.',
+                      ],
+                      [
+                        '03',
+                        'Return deliberately',
+                        'Come back to the main grind only if it still feels fun.',
+                      ],
+                    ].map(([number, title, detail]) => (
+                      <div key={number} className="flex gap-3">
+                        <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/[.04] font-mono text-[9px] text-primary">
+                          {number}
+                        </span>
+                        <div>
+                          <p className="text-xs font-semibold">{title}</p>
+                          <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
+                            {detail}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="rounded-[22px] border border-rose-300/15 bg-rose-300/[.035] p-5">
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-rose-300" />
+                    <div>
+                      <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-rose-300/80">
+                        HCIM guardrail
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        A pivot is a change of activity, not permission to take
+                        a risk you have not rehearsed. Dangerous cards still
+                        need the same preflight, abort call and empty deathbank.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              </aside>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <div className="grid gap-6 xl:grid-cols-[250px_minmax(0,1fr)_320px]">
+              <section className="rounded-[24px] border border-white/9 bg-card/60 p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-3 px-1">
+                  <div>
+                    <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-primary">
+                      Skill map
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold">
+                      Route breakpoints
+                    </h2>
+                  </div>
+                  <Gauge className="size-5 text-primary" />
+                </div>
+                <p className="mt-3 px-1 text-xs leading-5 text-muted-foreground">
+                  Pick a skill to estimate the next useful level. Values are
+                  planning ranges, not promises—rates change with attention,
+                  gear and world conditions.
+                </p>
+                <div className="mt-5 space-y-1.5">
+                  {skillPlans.map((skill) => {
+                    const active = selectedSkill.id === skill.id;
+                    return (
+                      <button
+                        key={skill.id}
+                        type="button"
+                        onClick={() => selectSkill(skill.id)}
+                        className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                          active
+                            ? 'border-primary/30 bg-primary/[.08] text-primary'
+                            : 'border-transparent bg-white/[.02] text-foreground/75 hover:border-white/10 hover:bg-white/[.045]'
+                        }`}
+                      >
+                        <span className="text-xs font-semibold">
+                          {skill.name}
+                        </span>
+                        <span className="font-mono text-[10px] tabular-nums">
+                          {skill.current} → {skill.target}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="rounded-[24px] border border-primary/15 bg-primary/[.03] p-5 shadow-2xl shadow-black/15 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className="bg-primary text-primary-foreground">
+                        COST-CONSCIOUS CALCULATOR
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="border-white/10 bg-white/[.025] text-muted-foreground"
+                      >
+                        Account snapshot · 31 Aug 2026
+                      </Badge>
+                    </div>
+                    <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em]">
+                      {selectedSkill.name} training plan
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {selectedSkill.current} → {skillTarget} ·{' '}
+                      {selectedSkill.targetLabel}
+                    </p>
+                  </div>
+                  <div className="grid size-16 shrink-0 place-items-center rounded-full border border-primary/25 bg-primary/[.06] font-mono text-xs text-primary">
+                    {skillProgress}%
+                  </div>
+                </div>
+
+                <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/8">
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-500"
+                    style={{ width: `${skillProgress}%` }}
+                  />
+                </div>
+
+                <div className="mt-6 grid gap-2 sm:grid-cols-4">
+                  {[
+                    ['XP remaining', formatNumber(skillXpRemaining)],
+                    [
+                      'Est. hours',
+                      skillHours < 0.1 ? '<0.1' : skillHours.toFixed(1),
+                    ],
+                    [
+                      'Direct cost',
+                      skillCost === 0 ? 'Low' : `${formatNumber(skillCost)} gp`,
+                    ],
+                    ['Selected lane', selectedSkillMethod.routeValue],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-xl border border-white/8 bg-black/10 p-3"
+                    >
+                      <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
+                        {label}
+                      </p>
+                      <p className="mt-1.5 text-sm font-semibold tabular-nums">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/8 bg-white/[.02] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-muted-foreground">
+                      Target level
+                    </p>
+                    <p className="mt-1 text-xs text-foreground/75">
+                      Use the next gate by default, or model a higher comfort
+                      target.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {[
+                      selectedSkill.target,
+                      Math.min(99, selectedSkill.target + 5),
+                    ].map((target, index) => (
+                      <Button
+                        key={`${target}-${index}`}
+                        variant={
+                          skillTarget === target ? 'secondary' : 'outline'
+                        }
+                        onClick={() => setSkillTarget(target)}
+                        className={`h-9 rounded-xl px-3 text-xs ${
+                          skillTarget === target
+                            ? 'bg-primary/15 text-primary hover:bg-primary/20'
+                            : 'border-white/10 bg-white/[.025]'
+                        }`}
+                      >
+                        {index === 0 ? 'Next gate' : 'Stretch'} · {target}
+                      </Button>
+                    ))}
+                    <input
+                      aria-label={`Custom ${selectedSkill.name} target level`}
+                      type="number"
+                      min={selectedSkill.current}
+                      max={99}
+                      value={skillTarget}
+                      onChange={(event) => {
+                        const next = Number(event.target.value);
+                        if (Number.isFinite(next)) {
+                          setSkillTarget(
+                            Math.min(99, Math.max(selectedSkill.current, next)),
+                          );
+                        }
+                      }}
+                      className="h-9 w-16 rounded-xl border border-white/10 bg-black/15 px-2 text-center font-mono text-xs text-foreground outline-none ring-primary/50 focus:ring-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-primary">
+                        Choose the lane
+                      </p>
+                      <h3 className="mt-1 text-lg font-semibold">
+                        Best value for this breakpoint
+                      </h3>
+                    </div>
+                    <span className="font-mono text-[9px] text-muted-foreground">
+                      {formatGpPerXp(selectedSkillMethod.gpPerXp)}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    {selectedSkill.methods.map((method) => {
+                      const active = selectedSkillMethod.id === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          onClick={() => setSelectedSkillMethodId(method.id)}
+                          className={`rounded-2xl border p-4 text-left transition-all ${
+                            active
+                              ? 'border-primary/35 bg-primary/[.07] shadow-[0_10px_28px_rgba(0,0,0,.14)]'
+                              : 'border-white/8 bg-black/10 hover:border-white/15 hover:bg-white/[.035]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="text-sm font-semibold">
+                              {method.name}
+                            </span>
+                            {method.recommended && (
+                              <Badge className="h-5 bg-emerald-300/12 font-mono text-[8px] uppercase tracking-[0.11em] text-emerald-200">
+                                Best value
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="font-mono text-[9px] text-primary">
+                              {formatNumber(method.xpPerHour)} XP/h
+                            </span>
+                            <RiskBadge risk={method.risk} compact />
+                            <span className="font-mono text-[9px] text-muted-foreground">
+                              {formatGpPerXp(method.gpPerXp)}
+                            </span>
+                          </div>
+                          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                            {method.detail}
+                          </p>
+                          <p className="mt-3 flex items-start gap-2 text-[11px] leading-5 text-foreground/75">
+                            <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                            <span>{method.routeValue}</span>
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+
+              <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+                <section className="rounded-[22px] border border-emerald-300/12 bg-emerald-300/[.035] p-5">
+                  <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-emerald-200/70">
+                    Route deposit
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold">
+                    {selectedSkill.targetLabel}
+                  </h3>
+                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    {selectedSkill.gate}
+                  </p>
+                </section>
+
+                <section className="rounded-[22px] border border-primary/14 bg-primary/[.035] p-5">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Shuffle className="size-4" />
+                    <p className="font-mono text-[8px] uppercase tracking-[0.16em]">
+                      Anti-burnout tie-in
+                    </p>
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    {selectedSkill.pivotNote}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => openTab('pivots')}
+                    className="mt-4 h-9 rounded-xl border-white/10 bg-white/[.025] text-xs"
+                  >
+                    Open pivot deck <ChevronRight />
+                  </Button>
+                </section>
+
+                <section className="rounded-[22px] border border-white/8 bg-white/[.022] p-5">
+                  <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-muted-foreground">
+                    How to read the estimate
+                  </p>
+                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    XP/h is a realistic planning range. Direct cost is a rough
+                    GP-per-XP lens, excluding drops, clue value, existing bank
+                    supplies and opportunity cost. Prefer the recommended lane
+                    when it also advances a quest, Slayer level or raid supply.
+                  </p>
                 </section>
               </aside>
             </div>
