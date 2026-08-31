@@ -67,13 +67,19 @@ import {
   gearItems,
   grindBreakers,
   hardcorePreflight,
+  loadoutPlans,
   moonsItems,
   phases,
   skillPlans,
+  slayerMasters,
+  slayerTaskPlans,
+  slayerUpgrades,
+  supplyPlans,
   sources,
   type GearItem,
   type Goal,
   type Risk,
+  type SlayerTaskVerdict,
 } from '@/lib/roadmap-data';
 
 const STORAGE_KEY = 'shadytron-roadbook-v1';
@@ -156,6 +162,41 @@ const pivotGrinds = [
   'Moons of Peril',
   'Dragon warhammer',
   'Skill training',
+] as const;
+
+const slayerVerdicts: SlayerTaskVerdict[] = ['Do', 'Extend', 'Block', 'Skip'];
+
+const slayerVerdictMeta: Record<
+  SlayerTaskVerdict,
+  { className: string; detail: string }
+> = {
+  Do: {
+    className: 'border-emerald-300/25 bg-emerald-300/8 text-emerald-200',
+    detail: 'Run it for route value',
+  },
+  Extend: {
+    className: 'border-primary/30 bg-primary/10 text-primary',
+    detail: 'Spend points for more volume',
+  },
+  Block: {
+    className: 'border-rose-300/25 bg-rose-300/8 text-rose-200',
+    detail: 'Protect a block slot',
+  },
+  Skip: {
+    className: 'border-slate-300/20 bg-slate-300/7 text-slate-300',
+    detail: 'Cancel when it appears',
+  },
+};
+
+const supplyCategories = [
+  'All',
+  'Herb',
+  'Seed',
+  'Log',
+  'Secondary',
+  'Food',
+  'Rune',
+  'Ammo',
 ] as const;
 
 const raidGates = [
@@ -484,6 +525,14 @@ export default function Home() {
       skillPlans[0].methods[0].id,
   );
   const [skillTarget, setSkillTarget] = useState(skillPlans[0].target);
+  const [slayerVerdict, setSlayerVerdict] =
+    useState<SlayerTaskVerdict>('Block');
+  const [slayerMasterId, setSlayerMasterId] = useState(slayerMasters[0].id);
+  const [selectedLoadoutId, setSelectedLoadoutId] = useState(
+    loadoutPlans[0].id,
+  );
+  const [supplyCategory, setSupplyCategory] =
+    useState<(typeof supplyCategories)[number]>('All');
 
   useEffect(() => {
     try {
@@ -496,6 +545,10 @@ export default function Home() {
           selectedSkillId?: string;
           selectedSkillMethodId?: string;
           skillTarget?: number;
+          slayerVerdict?: SlayerTaskVerdict;
+          slayerMasterId?: string;
+          selectedLoadoutId?: string;
+          supplyCategory?: (typeof supplyCategories)[number];
         };
         if (Array.isArray(parsed.completed)) {
           setCompleted(new Set([...confirmedDefaults, ...parsed.completed]));
@@ -529,6 +582,32 @@ export default function Home() {
               savedSkill.methods[0].id,
           );
         }
+        if (
+          slayerVerdicts.includes(parsed.slayerVerdict as SlayerTaskVerdict)
+        ) {
+          setSlayerVerdict(parsed.slayerVerdict as SlayerTaskVerdict);
+        }
+        if (
+          slayerMasters.some((master) => master.id === parsed.slayerMasterId)
+        ) {
+          setSlayerMasterId(parsed.slayerMasterId as string);
+        }
+        if (
+          loadoutPlans.some(
+            (loadout) => loadout.id === parsed.selectedLoadoutId,
+          )
+        ) {
+          setSelectedLoadoutId(parsed.selectedLoadoutId as string);
+        }
+        if (
+          supplyCategories.includes(
+            parsed.supplyCategory as (typeof supplyCategories)[number],
+          )
+        ) {
+          setSupplyCategory(
+            parsed.supplyCategory as (typeof supplyCategories)[number],
+          );
+        }
       }
     } catch {
       // A blocked/corrupt local store should never block the roadbook.
@@ -548,6 +627,10 @@ export default function Home() {
         selectedSkillId,
         selectedSkillMethodId,
         skillTarget,
+        slayerVerdict,
+        slayerMasterId,
+        selectedLoadoutId,
+        supplyCategory,
       }),
     );
   }, [
@@ -558,6 +641,10 @@ export default function Home() {
     selectedSkillId,
     selectedSkillMethodId,
     skillTarget,
+    slayerVerdict,
+    slayerMasterId,
+    selectedLoadoutId,
+    supplyCategory,
   ]);
 
   const moonsComplete = moonsItems.every((item) => completed.has(item.id));
@@ -625,6 +712,18 @@ export default function Home() {
         100,
     ),
   );
+  const selectedSlayerMaster =
+    slayerMasters.find((master) => master.id === slayerMasterId) ??
+    slayerMasters[0];
+  const filteredSlayerTasks = slayerTaskPlans.filter(
+    (task) => task.verdict === slayerVerdict,
+  );
+  const selectedLoadout =
+    loadoutPlans.find((loadout) => loadout.id === selectedLoadoutId) ??
+    loadoutPlans[0];
+  const filteredSupplies = supplyPlans.filter(
+    (supply) => supplyCategory === 'All' || supply.category === supplyCategory,
+  );
 
   const selectSkill = (id: string) => {
     const skill = skillPlans.find((item) => item.id === id);
@@ -652,6 +751,10 @@ export default function Home() {
     setPivotGrind('Moons of Peril');
     setQueuedPivot(null);
     selectSkill(skillPlans[0].id);
+    setSlayerVerdict('Block');
+    setSlayerMasterId(slayerMasters[0].id);
+    setSelectedLoadoutId(loadoutPlans[0].id);
+    setSupplyCategory('All');
     window.localStorage.removeItem(STORAGE_KEY);
     setActiveTab('route');
   };
@@ -912,6 +1015,12 @@ export default function Home() {
               </TabsTrigger>
               <TabsTrigger value="skills" className="h-9 min-w-24 px-3">
                 <Gauge /> Skills
+              </TabsTrigger>
+              <TabsTrigger value="slayer" className="h-9 min-w-24 px-3">
+                <Target /> Slayer
+              </TabsTrigger>
+              <TabsTrigger value="loadouts" className="h-9 min-w-24 px-3">
+                <Crosshair /> Loadouts
               </TabsTrigger>
               <TabsTrigger value="arsenal" className="h-9 min-w-24 px-3">
                 <PackageCheck /> Arsenal
@@ -1620,6 +1729,781 @@ export default function Home() {
                   </p>
                 </section>
               </aside>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="slayer">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
+              <div className="space-y-5">
+                <section className="rounded-[26px] border border-primary/15 bg-primary/[.035] p-5 shadow-2xl shadow-black/15 sm:p-7">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className="bg-primary text-primary-foreground">
+                          SLAYER COMMAND CENTER
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="border-white/10 bg-white/[.025] text-muted-foreground"
+                        >
+                          Gear-aware task pool
+                        </Badge>
+                      </div>
+                      <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+                        Turn every task into a raid deposit.
+                      </h2>
+                      <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+                        This is the Slayer layer for Shadytron’s current kit:
+                        imbued Slayer helm, zombie axe + dragon defender, RCB,
+                        Mystic/Ahrim/Karil/Verac options and warped sceptre. The
+                        verdicts assume 66 Slayer and combat ≈98, with no whip,
+                        trident, DWH or Bowfa yet.
+                      </p>
+                    </div>
+                    <Target className="hidden size-8 shrink-0 text-primary sm:block" />
+                  </div>
+
+                  <div className="mt-6 grid gap-3 md:grid-cols-3">
+                    {slayerMasters.map((master) => {
+                      const active = selectedSlayerMaster.id === master.id;
+                      return (
+                        <button
+                          key={master.id}
+                          type="button"
+                          onClick={() => setSlayerMasterId(master.id)}
+                          className={`rounded-2xl border p-4 text-left transition-all ${
+                            active
+                              ? 'border-primary/35 bg-primary/[.08] shadow-[0_10px_28px_rgba(0,0,0,.14)]'
+                              : 'border-white/8 bg-black/10 hover:border-white/15 hover:bg-white/[.035]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="text-sm font-semibold">
+                              {master.name}
+                            </span>
+                            {active && (
+                              <Check className="size-4 text-primary" />
+                            )}
+                          </div>
+                          <p className="mt-2 font-mono text-[9px] uppercase tracking-[.12em] text-primary">
+                            {master.status}
+                          </p>
+                          <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
+                            {master.requirement}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-white/8 bg-black/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-mono text-[8px] uppercase tracking-[.16em] text-primary">
+                        Current master call
+                      </p>
+                      <p className="mt-1 text-sm font-semibold">
+                        {selectedSlayerMaster.name} ·{' '}
+                        {selectedSlayerMaster.status}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        {selectedSlayerMaster.detail}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      nativeButton={false}
+                      render={
+                        <a
+                          href={selectedSlayerMaster.source}
+                          target="_blank"
+                          rel="noreferrer"
+                        />
+                      }
+                      aria-label={`Open source for ${selectedSlayerMaster.name}`}
+                      className="self-start text-muted-foreground hover:text-primary sm:self-center"
+                    >
+                      <ExternalLink />
+                    </Button>
+                  </div>
+                </section>
+
+                <section className="rounded-[26px] border border-white/9 bg-card/60 p-5 sm:p-7">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="font-mono text-[8px] uppercase tracking-[.18em] text-primary">
+                        Task decisions
+                      </p>
+                      <h3 className="mt-1 text-xl font-semibold">
+                        What to do when the streak rolls
+                      </h3>
+                      <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground">
+                        Blocks are master-specific and should protect slots you
+                        would cancel almost every time. Low-weight bad tasks are
+                        cheaper to skip; keep your points for high-frequency
+                        drains and revisit the list after MM2, WGS or major
+                        weapon drops.
+                      </p>
+                    </div>
+                    <span className="font-mono text-[9px] uppercase tracking-[.14em] text-muted-foreground">
+                      {filteredSlayerTasks.length} calls in this view
+                    </span>
+                  </div>
+
+                  <div className="mt-5 flex max-w-full gap-2 overflow-x-auto pb-1">
+                    {slayerVerdicts.map((verdict) => {
+                      const active = slayerVerdict === verdict;
+                      const meta = slayerVerdictMeta[verdict];
+                      const count = slayerTaskPlans.filter(
+                        (task) => task.verdict === verdict,
+                      ).length;
+                      return (
+                        <Button
+                          key={verdict}
+                          variant={active ? 'secondary' : 'outline'}
+                          onClick={() => setSlayerVerdict(verdict)}
+                          className={`h-10 shrink-0 rounded-xl px-3 text-xs ${
+                            active
+                              ? 'border-primary/25 bg-primary/15 text-primary'
+                              : 'border-white/10 bg-white/[.02]'
+                          }`}
+                        >
+                          {verdict}
+                          <span className="ml-1 font-mono text-[9px] opacity-60">
+                            {count}
+                          </span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                    {filteredSlayerTasks.map((task) => {
+                      const meta = slayerVerdictMeta[task.verdict];
+                      return (
+                        <article
+                          key={task.id}
+                          className="rounded-2xl border border-white/8 bg-black/10 p-4 transition-colors hover:border-white/15 hover:bg-white/[.025]"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-semibold">
+                                {task.task}
+                              </h4>
+                              <Badge
+                                variant="outline"
+                                className={`h-5 border font-mono text-[8px] uppercase tracking-[.12em] ${meta.className}`}
+                              >
+                                {task.verdict}
+                              </Badge>
+                            </div>
+                            {task.source && (
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                nativeButton={false}
+                                render={
+                                  <a
+                                    href={task.source}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  />
+                                }
+                                aria-label={`Open source for ${task.task}`}
+                                className="text-muted-foreground hover:text-primary"
+                              >
+                                <ExternalLink />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <RiskBadge risk={task.risk} compact />
+                            <span className="font-mono text-[9px] uppercase tracking-[.11em] text-muted-foreground">
+                              {meta.detail}
+                            </span>
+                          </div>
+                          <p className="mt-3 text-[11px] leading-5 text-primary/85">
+                            {task.condition}
+                          </p>
+                          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                            {task.reason}
+                          </p>
+                          <p className="mt-3 flex items-start gap-2 text-[11px] leading-5 text-foreground/75">
+                            <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                            <span>{task.routeValue}</span>
+                          </p>
+                          <p className="mt-3 font-mono text-[8px] uppercase tracking-[.12em] text-muted-foreground/70">
+                            {task.master}
+                          </p>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+
+              <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+                <section className="rounded-[22px] border border-primary/15 bg-primary/[.035] p-5">
+                  <div className="flex items-start gap-3">
+                    <Trophy className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <div>
+                      <p className="font-mono text-[8px] uppercase tracking-[.18em] text-primary/80">
+                        Point purchase order
+                      </p>
+                      <h3 className="mt-1 text-lg font-semibold">
+                        Fund the route, then the comfort
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {slayerUpgrades.map((upgrade) => {
+                      const done = completed.has(upgrade.id);
+                      return (
+                        <div
+                          key={upgrade.id}
+                          className={`rounded-xl border p-3 ${
+                            done
+                              ? 'border-emerald-300/15 bg-emerald-300/[.04]'
+                              : upgrade.priority === 'Now'
+                                ? 'border-primary/20 bg-primary/[.04]'
+                                : 'border-white/8 bg-black/10'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <ItemCheckbox
+                              id={`slayer-upgrade-${upgrade.id}`}
+                              checked={done}
+                              onToggle={(_, next) => toggle(upgrade.id, next)}
+                              label={`Mark ${upgrade.name} ${done ? 'incomplete' : 'complete'}`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-xs font-semibold">
+                                  {upgrade.name}
+                                </p>
+                                <span
+                                  className={`font-mono text-[9px] uppercase tracking-[.1em] ${
+                                    done
+                                      ? 'text-emerald-300'
+                                      : upgrade.priority === 'Now'
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground'
+                                  }`}
+                                >
+                                  {done ? 'Owned' : upgrade.priority}
+                                </span>
+                              </div>
+                              <p className="mt-1 font-mono text-[9px] text-primary/80">
+                                {upgrade.cost} · {upgrade.requirement}
+                              </p>
+                              <p className="mt-2 text-[10px] leading-4 text-muted-foreground">
+                                {upgrade.detail}
+                              </p>
+                              <p className="mt-2 text-[10px] leading-4 text-foreground/75">
+                                <span className="text-primary">→</span>{' '}
+                                {upgrade.payoff}
+                              </p>
+                            </div>
+                            {upgrade.source && (
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                nativeButton={false}
+                                render={
+                                  <a
+                                    href={upgrade.source}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  />
+                                }
+                                aria-label={`Open source for ${upgrade.name}`}
+                                className="text-muted-foreground hover:text-primary"
+                              >
+                                <ExternalLink />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="rounded-[22px] border border-emerald-300/12 bg-emerald-300/[.035] p-5">
+                  <p className="font-mono text-[8px] uppercase tracking-[.18em] text-emerald-200/70">
+                    Route handoff
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold">
+                    Nieve → 100 combat → Duradel/Kuradal
+                  </h3>
+                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    Use Konar for point bursts, brimstone keys or a deliberately
+                    useful location task. Keep ordinary XP on the default master
+                    until your block list and skip bank are funded.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => openTab('skills')}
+                    className="mt-4 h-9 rounded-xl border-white/10 bg-white/[.025] text-xs"
+                  >
+                    Open Slayer calculator <ChevronRight />
+                  </Button>
+                </section>
+
+                <section className="rounded-[22px] border border-rose-300/15 bg-rose-300/[.035] p-5">
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-rose-300" />
+                    <div>
+                      <p className="font-mono text-[8px] uppercase tracking-[.16em] text-rose-300/80">
+                        HCIM task rule
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        A “Do” verdict is a route recommendation, not a promise
+                        that the room is safe. Keep food, prayer, escape and a
+                        deathbank preflight on every dangerous assignment.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              </aside>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="loadouts">
+            <div className="space-y-6">
+              <section className="rounded-[26px] border border-primary/15 bg-primary/[.035] p-5 shadow-2xl shadow-black/15 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className="bg-primary text-primary-foreground">
+                        LOADOUT &amp; SUPPLY DECK
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="border-white/10 bg-white/[.025] text-muted-foreground"
+                      >
+                        Checklist syncs with Arsenal
+                      </Badge>
+                    </div>
+                    <h2 className="mt-4 text-2xl font-semibold tracking-[-.03em] sm:text-3xl">
+                      Stage the bank before you stage the boss.
+                    </h2>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+                      Pick the encounter, tick the exact gear and inventory
+                      pieces, then restock the shared supply bank below. Checked
+                      owned gear is the same checklist used by Arsenal, so a
+                      single update keeps the whole roadbook honest.
+                    </p>
+                  </div>
+                  <Crosshair className="hidden size-8 shrink-0 text-primary sm:block" />
+                </div>
+
+                <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  {loadoutPlans.map((loadout) => {
+                    const active = selectedLoadout.id === loadout.id;
+                    const ready =
+                      loadout.gear.filter(
+                        (item) =>
+                          item.checklistId && completed.has(item.checklistId),
+                      ).length +
+                      loadout.inventory.filter(
+                        (item) =>
+                          item.checklistId && completed.has(item.checklistId),
+                      ).length;
+                    const total =
+                      loadout.gear.length + loadout.inventory.length;
+                    return (
+                      <button
+                        key={loadout.id}
+                        type="button"
+                        onClick={() => setSelectedLoadoutId(loadout.id)}
+                        className={`rounded-2xl border p-4 text-left transition-all ${
+                          active
+                            ? 'border-primary/35 bg-primary/[.08] shadow-[0_10px_28px_rgba(0,0,0,.14)]'
+                            : 'border-white/8 bg-black/10 hover:border-white/15 hover:bg-white/[.035]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-sm font-semibold">
+                            {loadout.name}
+                          </span>
+                          {active && <Check className="size-4 text-primary" />}
+                        </div>
+                        <p className="mt-2 font-mono text-[9px] uppercase tracking-[.12em] text-primary">
+                          {loadout.eyebrow}
+                        </p>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <RiskBadge risk={loadout.risk} compact />
+                          <span className="font-mono text-[9px] text-muted-foreground">
+                            {ready}/{total} staged
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
+                <section className="rounded-[26px] border border-white/9 bg-card/60 p-5 sm:p-7">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="font-mono text-[8px] uppercase tracking-[.18em] text-primary">
+                        {selectedLoadout.eyebrow}
+                      </p>
+                      <h3 className="mt-1 text-2xl font-semibold tracking-[-.03em]">
+                        {selectedLoadout.name}
+                      </h3>
+                      <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                        {selectedLoadout.summary}
+                      </p>
+                    </div>
+                    {selectedLoadout.source && (
+                      <Button
+                        variant="outline"
+                        nativeButton={false}
+                        render={
+                          <a
+                            href={selectedLoadout.source}
+                            target="_blank"
+                            rel="noreferrer"
+                          />
+                        }
+                        className="h-9 shrink-0 rounded-xl border-white/10 bg-white/[.025] text-xs"
+                      >
+                        Open encounter guide <ExternalLink />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="mt-7 grid gap-6 lg:grid-cols-2">
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-mono text-[8px] uppercase tracking-[.16em] text-primary">
+                            Equipment check
+                          </p>
+                          <h4 className="mt-1 text-lg font-semibold">
+                            Wear this
+                          </h4>
+                        </div>
+                        <span className="font-mono text-[9px] text-muted-foreground">
+                          {
+                            selectedLoadout.gear.filter(
+                              (item) =>
+                                item.checklistId &&
+                                completed.has(item.checklistId),
+                            ).length
+                          }{' '}
+                          / {selectedLoadout.gear.length}
+                        </span>
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        {selectedLoadout.gear.map((item) => {
+                          const checked = Boolean(
+                            item.checklistId && completed.has(item.checklistId),
+                          );
+                          return (
+                            <label
+                              key={item.id}
+                              htmlFor={`loadout-gear-${selectedLoadout.id}-${item.id}`}
+                              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                                checked
+                                  ? 'border-emerald-300/15 bg-emerald-300/[.04]'
+                                  : 'border-white/8 bg-black/10 hover:border-white/15'
+                              }`}
+                            >
+                              <ItemCheckbox
+                                id={`loadout-gear-${selectedLoadout.id}-${item.id}`}
+                                checked={checked}
+                                onToggle={(_, next) => {
+                                  if (item.checklistId) {
+                                    toggle(item.checklistId, next);
+                                  }
+                                }}
+                                label={`Mark ${item.name} ${checked ? 'not ready' : 'ready'}`}
+                              />
+                              <span className="min-w-0">
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs font-semibold">
+                                    {item.name}
+                                  </span>
+                                  <span className="font-mono text-[8px] uppercase tracking-[.1em] text-primary/75">
+                                    {item.slot}
+                                  </span>
+                                </span>
+                                <span className="mt-1 block text-[10px] leading-4 text-muted-foreground">
+                                  {item.note}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-mono text-[8px] uppercase tracking-[.16em] text-primary">
+                            Inventory check
+                          </p>
+                          <h4 className="mt-1 text-lg font-semibold">
+                            Pack this
+                          </h4>
+                        </div>
+                        <span className="font-mono text-[9px] text-muted-foreground">
+                          {
+                            selectedLoadout.inventory.filter(
+                              (item) =>
+                                item.checklistId &&
+                                completed.has(item.checklistId),
+                            ).length
+                          }{' '}
+                          / {selectedLoadout.inventory.length}
+                        </span>
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        {selectedLoadout.inventory.map((item) => {
+                          const checked = Boolean(
+                            item.checklistId && completed.has(item.checklistId),
+                          );
+                          return (
+                            <label
+                              key={item.id}
+                              htmlFor={`loadout-inventory-${selectedLoadout.id}-${item.id}`}
+                              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                                checked
+                                  ? 'border-emerald-300/15 bg-emerald-300/[.04]'
+                                  : 'border-white/8 bg-black/10 hover:border-white/15'
+                              }`}
+                            >
+                              <ItemCheckbox
+                                id={`loadout-inventory-${selectedLoadout.id}-${item.id}`}
+                                checked={checked}
+                                onToggle={(_, next) => {
+                                  if (item.checklistId) {
+                                    toggle(item.checklistId, next);
+                                  }
+                                }}
+                                label={`Mark ${item.name} ${checked ? 'not packed' : 'packed'}`}
+                              />
+                              <span className="min-w-0">
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs font-semibold">
+                                    {item.name}
+                                  </span>
+                                  {item.quantity && (
+                                    <span className="rounded-full border border-primary/15 bg-primary/[.05] px-2 py-0.5 font-mono text-[8px] text-primary">
+                                      {item.quantity}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="mt-1 block font-mono text-[8px] uppercase tracking-[.1em] text-primary/75">
+                                  {item.slot}
+                                </span>
+                                <span className="mt-1 block text-[10px] leading-4 text-muted-foreground">
+                                  {item.note}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+                  <section className="rounded-[22px] border border-emerald-300/12 bg-emerald-300/[.035] p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-[8px] uppercase tracking-[.18em] text-emerald-200/70">
+                          Preflight
+                        </p>
+                        <h3 className="mt-1 text-lg font-semibold">
+                          Exit gate
+                        </h3>
+                      </div>
+                      <ShieldCheck className="size-5 text-emerald-300" />
+                    </div>
+                    <ul className="mt-4 space-y-3">
+                      {selectedLoadout.requirements.map((requirement) => (
+                        <li
+                          key={requirement}
+                          className="flex items-start gap-2 text-xs leading-5 text-muted-foreground"
+                        >
+                          <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-300" />
+                          <span>{requirement}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+
+                  <section className="rounded-[22px] border border-rose-300/15 bg-rose-300/[.035] p-5">
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="mt-0.5 size-5 shrink-0 text-rose-300" />
+                      <div>
+                        <p className="font-mono text-[8px] uppercase tracking-[.18em] text-rose-300/80">
+                          Abort call
+                        </p>
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                          {selectedLoadout.abort}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="rounded-[22px] border border-white/8 bg-white/[.022] p-5">
+                    <p className="font-mono text-[8px] uppercase tracking-[.18em] text-muted-foreground">
+                      Why this order
+                    </p>
+                    <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                      The loadouts deliberately use owned gear first. Moon sets,
+                      Fire Cape, prayer scrolls, trident and Bowfa are upgrades
+                      that raise comfort; none should be an excuse to bring an
+                      untested inventory into dangerous content.
+                    </p>
+                  </section>
+                </aside>
+              </div>
+
+              <section className="rounded-[26px] border border-white/9 bg-card/60 p-5 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="font-mono text-[8px] uppercase tracking-[.18em] text-primary">
+                      Supply bank
+                    </p>
+                    <h3 className="mt-1 text-2xl font-semibold tracking-[-.03em]">
+                      Grow the inputs that make the route safe.
+                    </h3>
+                    <p className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">
+                      Use the best-source lane for routine restocking and the
+                      backup lane for a bounded refresh. Ranarrs are
+                      intentionally first-class here: farming contracts + herb
+                      runs are the cheapest way to keep prayer potions ahead of
+                      bossing.
+                    </p>
+                  </div>
+                  <span className="font-mono text-[9px] uppercase tracking-[.14em] text-muted-foreground">
+                    {filteredSupplies.length} supply lanes
+                  </span>
+                </div>
+
+                <div className="mt-5 flex max-w-full gap-2 overflow-x-auto pb-1">
+                  {supplyCategories.map((category) => {
+                    const active = supplyCategory === category;
+                    const count =
+                      category === 'All'
+                        ? supplyPlans.length
+                        : supplyPlans.filter(
+                            (supply) => supply.category === category,
+                          ).length;
+                    return (
+                      <Button
+                        key={category}
+                        variant={active ? 'secondary' : 'outline'}
+                        onClick={() => setSupplyCategory(category)}
+                        className={`h-9 shrink-0 rounded-xl px-3 text-xs ${
+                          active
+                            ? 'border-primary/25 bg-primary/15 text-primary'
+                            : 'border-white/10 bg-white/[.02]'
+                        }`}
+                      >
+                        {category}
+                        <span className="ml-1 font-mono text-[9px] opacity-60">
+                          {count}
+                        </span>
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredSupplies.map((supply) => {
+                    const done = completed.has(supply.checklistId);
+                    return (
+                      <article
+                        key={supply.id}
+                        className={`rounded-2xl border p-4 transition-colors ${
+                          done
+                            ? 'border-emerald-300/15 bg-emerald-300/[.04]'
+                            : 'border-white/8 bg-black/10 hover:border-white/15'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <ItemCheckbox
+                            id={`supply-bank-${supply.id}`}
+                            checked={done}
+                            onToggle={(_, next) =>
+                              toggle(supply.checklistId, next)
+                            }
+                            label={`Mark ${supply.name} ${done ? 'not stocked' : 'stocked'}`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="text-sm font-semibold">
+                                {supply.name}
+                              </h4>
+                              <Badge
+                                variant="outline"
+                                className={`h-5 font-mono text-[8px] uppercase tracking-[.11em] ${
+                                  supply.priority === 'Now'
+                                    ? 'border-primary/25 bg-primary/[.06] text-primary'
+                                    : supply.priority === 'Core'
+                                      ? 'border-emerald-300/20 bg-emerald-300/[.04] text-emerald-200'
+                                      : 'border-white/10 bg-white/[.02] text-muted-foreground'
+                                }`}
+                              >
+                                {supply.priority}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 font-mono text-[8px] uppercase tracking-[.1em] text-primary/75">
+                              {supply.category}
+                            </p>
+                            <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
+                              {supply.use}
+                            </p>
+                            <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.035] p-3">
+                              <p className="font-mono text-[8px] uppercase tracking-[.12em] text-emerald-200/70">
+                                Best source
+                              </p>
+                              <p className="mt-1 text-[10px] leading-4 text-emerald-100/80">
+                                {supply.bestSource}
+                              </p>
+                            </div>
+                            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+                              <span className="text-primary">Backup:</span>{' '}
+                              {supply.backupSource}
+                            </p>
+                            <p className="mt-3 flex items-start gap-2 text-[10px] leading-4 text-foreground/75">
+                              <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                              <span>{supply.routeValue}</span>
+                            </p>
+                          </div>
+                          {supply.source && (
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              nativeButton={false}
+                              render={
+                                <a
+                                  href={supply.source}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                />
+                              }
+                              aria-label={`Open source for ${supply.name}`}
+                              className="text-muted-foreground hover:text-primary"
+                            >
+                              <ExternalLink />
+                            </Button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
             </div>
           </TabsContent>
 

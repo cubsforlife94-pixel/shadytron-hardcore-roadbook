@@ -1683,6 +1683,999 @@ export const skillPlans: SkillPlan[] = [
   },
 ];
 
+export type SlayerTaskVerdict = 'Do' | 'Extend' | 'Block' | 'Skip';
+
+export type SlayerTaskPlan = {
+  id: string;
+  task: string;
+  verdict: SlayerTaskVerdict;
+  master: string;
+  condition: string;
+  reason: string;
+  routeValue: string;
+  risk: Risk;
+  source?: string;
+};
+
+export type SlayerUpgrade = {
+  id: string;
+  name: string;
+  cost: string;
+  priority: 'Now' | 'Next' | 'Later' | 'Optional';
+  requirement: string;
+  detail: string;
+  payoff: string;
+  source?: string;
+};
+
+export type SlayerMasterPlan = {
+  id: string;
+  name: string;
+  status: string;
+  requirement: string;
+  detail: string;
+  source: string;
+};
+
+export const slayerMasters: SlayerMasterPlan[] = [
+  {
+    id: 'nieve-steve',
+    name: 'Nieve / Steve',
+    status: 'Use now',
+    requirement: '85 combat · current combat ≈98',
+    detail:
+      'Default volume master for your current bracket. Steve replaces Nieve after Monkey Madness II; both are the right bridge while you finish 69 Slayer and quest gates.',
+    source: 'https://oldschool.runescape.wiki/w/Nieve',
+  },
+  {
+    id: 'duradel-kuradal',
+    name: 'Duradel / Kuradal',
+    status: 'Next upgrade',
+    requirement: '100 combat · WGS changes Duradel to Kuradal',
+    detail:
+      'Move here as soon as the combat requirement is met and the route is ready. Higher-level assignments become worth the extra danger once the block list and core unlocks are funded.',
+    source: 'https://oldschool.runescape.wiki/w/Duradel',
+  },
+  {
+    id: 'konar',
+    name: 'Konar quo Maten',
+    status: 'Point / location tool',
+    requirement: '75 combat · current requirement met',
+    detail:
+      'Use for point bursts, brimstone keys or a specific location task. Do not make Konar the default XP master when a bad location would turn a good task into a supply drain.',
+    source: 'https://oldschool.runescape.wiki/w/Konar_quo_Maten',
+  },
+];
+
+export const slayerTaskPlans: SlayerTaskPlan[] = [
+  {
+    id: 'slayer-dust-devils',
+    task: 'Dust devils',
+    verdict: 'Extend',
+    master: 'Nieve / Steve · Duradel / Kuradal',
+    condition: 'Only after Desert Treasure I and Ancient Magicks are online',
+    reason:
+      'Excellent burst task with superiors. Your 75 Magic and warped sceptre are useful, but the real XP jump wants Ancient Magicks; do not spend points extending it before that quest branch.',
+    routeValue: 'Magic XP + Slayer levels toward whip/trident',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_task/Dust_devils',
+  },
+  {
+    id: 'slayer-bloodvelds',
+    task: 'Bloodvelds',
+    verdict: 'Extend',
+    master: 'Nieve / Steve · Duradel / Kuradal',
+    condition:
+      'Extend once your herb bank is healthy and you can sustain the trip',
+    reason:
+      'Reliable XP and useful herb/seed supplies for an Ironman. Your imbued Slayer helm makes the task comfortable; keep it short if you are low on food or prayer potions.',
+    routeValue: 'Herblore 57 → 65 + Slayer XP',
+    risk: 'mixed',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_task/Bloodvelds',
+  },
+  {
+    id: 'slayer-lizardmen',
+    task: 'Lizardmen',
+    verdict: 'Do',
+    master: 'Nieve / Steve · Duradel / Kuradal · Konar',
+    condition: 'Buy Reptile Got Ripped first if the unlock is missing',
+    reason:
+      'This is the DWH-adjacent task worth keeping. Cannon or safe ranged layouts can make it a fast points-and-shaman pipeline once the unlock is purchased.',
+    routeValue: 'Dragon warhammer attempt + Kourend resources',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Lizardman',
+  },
+  {
+    id: 'slayer-black-demons',
+    task: 'Black demons',
+    verdict: 'Do',
+    master: 'Nieve / Steve · Duradel / Kuradal · Konar',
+    condition: 'Keep until MM2 and the zenyte branch are finished',
+    reason:
+      'Do not block a future demonic gorilla task before you have the four zenytes. Your zombie axe and Karil/Verac defensive options are enough for ordinary black demons; reassess after the unique chase.',
+    routeValue: 'MM2 → demonic gorillas → zenytes',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Black_demon',
+  },
+  {
+    id: 'slayer-greater-demons',
+    task: 'Greater demons',
+    verdict: 'Do',
+    master: 'Nieve / Steve · Duradel / Kuradal · Konar',
+    condition: 'Keep for Tormented Demons after WGS; otherwise short-skip',
+    reason:
+      'The task becomes valuable when WGS unlocks Tormented Demons. Until then, it is a slow ordinary-demon assignment with no immediate weapon payoff for your current kit.',
+    routeValue: 'Tormented synapse → Scorching bow branch',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Greater_demon',
+  },
+  {
+    id: 'slayer-aberrant-spectres',
+    task: 'Aberrant spectres',
+    verdict: 'Do',
+    master: 'Nieve / Steve · Duradel / Kuradal',
+    condition: 'Keep while Herblore is the bottleneck',
+    reason:
+      'The imbued Slayer helm is already owned, so there is no reason to chase the mask drop. The task is still a useful herb/seed deposit while Herblore is your WGS gate.',
+    routeValue: 'Herblore supplies + low-attention Slayer XP',
+    risk: 'mixed',
+    source: 'https://oldschool.runescape.wiki/w/Aberrant_spectre',
+  },
+  {
+    id: 'slayer-fire-giants',
+    task: 'Fire giants',
+    verdict: 'Do',
+    master: 'Nieve / Steve · Duradel / Kuradal',
+    condition: 'Use as an AFK reset, not an extension target',
+    reason:
+      'Your zombie axe makes them a low-attention melee task with ensouled heads and steady XP. Complete the assignment when you want to recover momentum; do not spend points extending it.',
+    routeValue: 'Prayer supplies + Slayer XP',
+    risk: 'mixed',
+    source: 'https://oldschool.runescape.wiki/w/Fire_giant',
+  },
+  {
+    id: 'slayer-gargoyles',
+    task: 'Gargoyles',
+    verdict: 'Do',
+    master: 'Nieve / Steve · Duradel / Kuradal · Konar',
+    condition: 'Revisit at 75 Slayer / 80 combat',
+    reason:
+      'Not currently assignable at 66 Slayer, but it is a good future cash/alch and AFK task with your melee kit. Reassess Grotesque Guardians only after core raid gear is stable.',
+    routeValue: 'Cash bank + future GGs option',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_task/Gargoyles',
+  },
+  {
+    id: 'slayer-hellhounds',
+    task: 'Hellhounds',
+    verdict: 'Block',
+    master: 'Nieve / Steve · Duradel / Kuradal',
+    condition: 'Block until 91 Slayer / Cerberus is the active plan',
+    reason:
+      'High-volume, low-reward before Cerberus. Your current weapon set does not turn the task into a meaningful upgrade, so protect your points for Lizardmen, superior and skip quality.',
+    routeValue: 'Preserves skips for high-value tasks',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Hellhound',
+  },
+  {
+    id: 'slayer-drakes',
+    task: 'Drakes',
+    verdict: 'Block',
+    master: 'Konar primarily',
+    condition: 'Block if assigned often and the harpoon/scales are not a goal',
+    reason:
+      'Slow, supply-heavy and not a direct raid upgrade for your current account. Keep them only when you specifically want the dragon harpoon or a relaxed Konar task.',
+    routeValue: 'Avoids a low-momentum assignment',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Drake',
+  },
+  {
+    id: 'slayer-suqah',
+    task: 'Suqah',
+    verdict: 'Block',
+    master: 'Nieve / Steve · Duradel / Kuradal',
+    condition: 'Block when the point bank can absorb the slot',
+    reason:
+      'The task asks for food, prayer and cannon/safespot attention without paying back a current raid requirement. Skip it while building the clean task pool.',
+    routeValue: 'More rolls for dusties, bloodvelds and lizardmen',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Suqah',
+  },
+  {
+    id: 'slayer-cave-horrors',
+    task: 'Cave horrors',
+    verdict: 'Skip',
+    master: 'Nieve / Steve · Duradel / Kuradal',
+    condition: 'Flat skip after owning the imbued Slayer helm',
+    reason:
+      'You already have the item that makes this task worthwhile. Do not block a low-weight task; spend the points only if the assignment becomes frequent enough to drain momentum.',
+    routeValue: 'Protects points without wasting a block slot',
+    risk: 'mixed',
+    source: 'https://oldschool.runescape.wiki/w/Cave_horror',
+  },
+  {
+    id: 'slayer-steel-dragons',
+    task: 'Steel / iron dragons',
+    verdict: 'Skip',
+    master: 'Nieve / Steve · Duradel / Kuradal · Konar',
+    condition:
+      'Flat skip unless a diary or collection-log goal changes the value',
+    reason:
+      'No current gear or route target justifies the prayer, antifire and time tax. Do not confuse “dangerous” with “progress”; this is a clean cancel.',
+    routeValue: 'Preserves supplies for raids and WGS',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Steel_dragon',
+  },
+  {
+    id: 'slayer-spiritual-creatures',
+    task: 'Spiritual creatures',
+    verdict: 'Skip',
+    master: 'Duradel / Kuradal · Konar',
+    condition: 'Skip until a specific boot or boss task is desired',
+    reason:
+      'The general assignment is low urgency for your raid route. Keep the slot open for tasks that feed WGS, DWH, zenytes, whip or trident.',
+    routeValue: 'Higher-value task rolls',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Spiritual_creature',
+  },
+  {
+    id: 'slayer-black-dragons',
+    task: 'Black dragons',
+    verdict: 'Skip',
+    master: 'Nieve / Steve · Duradel / Kuradal · Konar',
+    condition: 'Skip unless you deliberately want KBD or prayer bones',
+    reason:
+      'Your first dragon boss route is not a current gate. Cancel ordinary black dragons rather than spending time on a task that does not improve the Moons → CoX plan.',
+    routeValue: 'Keeps the route focused on raids',
+    risk: 'danger',
+    source: 'https://oldschool.runescape.wiki/w/Black_dragon',
+  },
+];
+
+export const slayerUpgrades: SlayerUpgrade[] = [
+  {
+    id: 'slayer-bigger-badder',
+    name: 'Bigger and Badder',
+    cost: '50 points',
+    priority: 'Now',
+    requirement: 'No extra level gate',
+    detail:
+      'Unlock superior Slayer monsters before you spend points on comfort perks. The superior roll is one of the best long-term chances at an imbued heart or eternal gem.',
+    payoff: 'Better task ceiling + rare raid-quality utility drops',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_Rewards',
+  },
+  {
+    id: 'slayer-reptile-ripped',
+    name: 'Reptile Got Ripped',
+    cost: '75 points',
+    priority: 'Now',
+    requirement: 'Your 66 Slayer is sufficient',
+    detail:
+      'Unlock Lizardmen assignments. This is the cleanest Slayer-side setup for your Dragon Warhammer plan and can be used with Nieve, Duradel/Kuradal or Konar.',
+    payoff: 'Lizardmen task rolls → DWH attempts',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_Rewards',
+  },
+  {
+    id: 'slayer-broader-fletching',
+    name: 'Broader Fletching',
+    cost: '300 points',
+    priority: 'Now',
+    requirement: '55 Fletching · current 64',
+    detail:
+      'Verify this before buying cosmetic or boss-task perks. Broad bolts keep the RCB useful while your Eclipse ranged package and future raid weapons come online.',
+    payoff: 'Sustainable RCB ammunition + later amethyst broad bolts',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_Rewards',
+  },
+  {
+    id: 'slayer-ring-bling',
+    name: 'Ring Bling',
+    cost: '150 points',
+    priority: 'Next',
+    requirement: '75 Crafting · current 60',
+    detail:
+      'Delay until the Crafting calculator says 75 is a sensible side target. Slayer rings compress travel, but they do not beat Bigger and Badder or Lizardmen for this route.',
+    payoff: 'Fast task travel and better session pacing',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_Rewards',
+  },
+  {
+    id: 'slayer-like-boss',
+    name: 'Like a Boss',
+    cost: '200 points',
+    priority: 'Later',
+    requirement: 'Boss prerequisites + a healthy skip bank',
+    detail:
+      'Unlock after the first core quest/gear gates and once you are comfortable sacrificing task efficiency for selected boss assignments. Do not buy just to create more dangerous rolls.',
+    payoff: 'Controlled boss-task access for a mature account',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_Rewards',
+  },
+  {
+    id: 'slayer-basilocked',
+    name: 'Basilocked',
+    cost: '80 points',
+    priority: 'Optional',
+    requirement: 'Faceguard branch desired',
+    detail:
+      'Only buy when you actively want Basilisk Knights and a Neitiznot faceguard. Your helm of Neitiznot and imbued Slayer helm already cover the current raid route.',
+    payoff: 'Optional faceguard upgrade branch',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_Rewards',
+  },
+  {
+    id: 'slayer-task-storage',
+    name: 'Task Storage',
+    cost: '1,000 points',
+    priority: 'Later',
+    requirement: 'Large point bank',
+    detail:
+      'Powerful quality of life, but too expensive to starve your first blocks, Bigger and Badder, Lizardmen or skips. Recheck the live shop cost before purchase.',
+    payoff: 'Save a good task while pursuing a second goal',
+    source: 'https://oldschool.runescape.wiki/w/Slayer_Rewards',
+  },
+];
+
+export type LoadoutItem = {
+  id: string;
+  name: string;
+  slot: string;
+  quantity?: string;
+  note: string;
+  checklistId?: string;
+};
+
+export type EncounterLoadout = {
+  id: string;
+  name: string;
+  eyebrow: string;
+  risk: Risk;
+  summary: string;
+  requirements: string[];
+  gear: LoadoutItem[];
+  inventory: LoadoutItem[];
+  abort: string;
+  source?: string;
+};
+
+export type SupplyPlan = {
+  id: string;
+  name: string;
+  category: 'Herb' | 'Seed' | 'Log' | 'Secondary' | 'Food' | 'Rune' | 'Ammo';
+  priority: 'Now' | 'Core' | 'Later';
+  use: string;
+  bestSource: string;
+  backupSource: string;
+  routeValue: string;
+  checklistId: string;
+  source?: string;
+};
+
+export const loadoutPlans: EncounterLoadout[] = [
+  {
+    id: 'loadout-moons',
+    name: 'Moons of Peril',
+    eyebrow: 'Current green-log grind',
+    risk: 'danger',
+    summary:
+      'Three-style inventory built around your zombie axe, warped sceptre and RCB. Keep the switch compact; every extra item is a slower prayer/food decision in the room.',
+    requirements: [
+      '75 Ranged for the Eclipse package; use green d’hide/RCB while waiting',
+      'Fixed teleport, empty deathbank and a defined chest cap',
+      'Protect-from-prayer rhythm rehearsed before chasing another set',
+    ],
+    gear: [
+      {
+        id: 'moons-zombie-axe',
+        name: 'Zombie axe',
+        slot: 'Melee weapon',
+        note: 'Default melee anchor; pair with the dragon defender.',
+        checklistId: 'gear-zombie-axe',
+      },
+      {
+        id: 'moons-dragon-defender',
+        name: 'Dragon defender',
+        slot: 'Melee off-hand',
+        note: 'Best owned melee accuracy switch.',
+        checklistId: 'gear-dragon-defender',
+      },
+      {
+        id: 'moons-warped-sceptre',
+        name: 'Warped sceptre',
+        slot: 'Magic weapon',
+        note: 'Reliable powered staff bridge until trident.',
+        checklistId: 'gear-warped-sceptre',
+      },
+      {
+        id: 'moons-mystic',
+        name: 'Mystic / Ahrim hood',
+        slot: 'Magic armour',
+        note: 'Use the strongest pieces you can protect without bloating the switch.',
+        checklistId: 'gear-mystic',
+      },
+      {
+        id: 'moons-rcb',
+        name: 'Rune crossbow',
+        slot: 'Ranged weapon',
+        note: 'Bring broad or enchanted bolts; Eclipse atlatl is the ranged upgrade.',
+        checklistId: 'gear-rcb',
+      },
+      {
+        id: 'moons-karils-coif',
+        name: 'Karil’s coif / green d’hide',
+        slot: 'Ranged armour',
+        note: 'Use Karil head or green d’hide until Eclipse pieces arrive.',
+        checklistId: 'gear-karils-helm',
+      },
+    ],
+    inventory: [
+      {
+        id: 'moons-food',
+        name: 'High-healing food',
+        slot: 'Food',
+        quantity: '18–22',
+        note: 'Choose the food your current fishing/cooking bank can replace cheaply.',
+        checklistId: 'supply-food',
+      },
+      {
+        id: 'moons-prayer',
+        name: 'Prayer potions / restores',
+        slot: 'Prayer',
+        quantity: '4–6',
+        note: 'Count charges, not just vials; leave a reserve for the trip home.',
+        checklistId: 'supply-prayer-potions',
+      },
+      {
+        id: 'moons-super-combat',
+        name: 'Super combat or strength potions',
+        slot: 'Boost',
+        quantity: '1–2',
+        note: 'Use the cheapest reliable boost; do not burn scarce overload-class supplies.',
+        checklistId: 'supply-combat-potions',
+      },
+      {
+        id: 'moons-teleport',
+        name: 'Emergency teleport',
+        slot: 'Safety',
+        quantity: '1',
+        note: 'Keep it in the same slot every run and leave before the bank is empty.',
+        checklistId: 'supply-teleports',
+      },
+    ],
+    abort:
+      'Abort when supplies are below the pre-set threshold, a disconnect occurs, or the room stops feeling boring. The green log is never worth improvising a death.',
+    source: 'https://oldschool.runescape.wiki/w/Moons_of_Peril/Strategies',
+  },
+  {
+    id: 'loadout-fight-caves',
+    name: 'Fight Caves / Jad',
+    eyebrow: 'Status-safe mechanics deposit',
+    risk: 'status-safe',
+    summary:
+      'A conservative RCB setup that turns your first cape attempt into ranged/prayer practice. Do not chase speed; build a repeatable wave rhythm.',
+    requirements: [
+      'Ranged 75+ recommended; use Karil/green d’hide until the Eclipse bridge',
+      'Know the Italy-rock safespot and Jad healer plan before the live attempt',
+      'Use a fixed wave log and leave with the cape, not a highlight clip',
+    ],
+    gear: [
+      {
+        id: 'caves-rcb',
+        name: 'Rune crossbow',
+        slot: 'Ranged weapon',
+        note: 'Bring broad bolts for waves and a stronger bolt option for Jad if bank allows.',
+        checklistId: 'gear-rcb',
+      },
+      {
+        id: 'caves-karils',
+        name: 'Karil’s coif + best ranged body/legs',
+        slot: 'Ranged armour',
+        note: 'Karil head and green d’hide are fine while Eclipse is incomplete.',
+        checklistId: 'gear-karils-helm',
+      },
+      {
+        id: 'caves-slayer-helm',
+        name: 'Imbued Slayer helm or best ranged helm',
+        slot: 'Head',
+        note: 'Use the helm that gives the best practical ranged defence for your setup.',
+        checklistId: 'gear-black-mask',
+      },
+      {
+        id: 'caves-defender',
+        name: 'Defender / book swap',
+        slot: 'Off-hand',
+        note: 'Bring only if your ranged setup benefits; inventory space matters more than a tiny max hit.',
+        checklistId: 'gear-dragon-defender',
+      },
+    ],
+    inventory: [
+      {
+        id: 'caves-ranged-pots',
+        name: 'Ranging potions',
+        slot: 'Boost',
+        quantity: '4–6',
+        note: 'Dose before key waves; keep one dose for Jad if needed.',
+        checklistId: 'supply-ranged-potions',
+      },
+      {
+        id: 'caves-prayer',
+        name: 'Prayer potions',
+        slot: 'Prayer',
+        quantity: '16–20',
+        note: 'Bring the amount your wave practice proves; overpack until the cape is secured.',
+        checklistId: 'supply-prayer-potions',
+      },
+      {
+        id: 'caves-food',
+        name: 'High-healing food',
+        slot: 'Food',
+        quantity: '10–14',
+        note: 'Reserve food for healer mistakes and a safe exit from the caves.',
+        checklistId: 'supply-food',
+      },
+      {
+        id: 'caves-healers',
+        name: 'Emergency ranged switch / darts',
+        slot: 'Jad utility',
+        quantity: '1 slot',
+        note: 'A cheap tagging option keeps healer handling simple without sacrificing the cape run.',
+        checklistId: 'supply-ammo',
+      },
+    ],
+    abort:
+      'Fight Caves is a status-safe practice lane, but still respect the logout/safespot plan. Stop the session if the wave log, prayer rhythm or supplies become uncertain.',
+    source: 'https://oldschool.runescape.wiki/w/TzHaar_Fight_Cave',
+  },
+  {
+    id: 'loadout-royal-titans',
+    name: 'Royal Titans duo',
+    eyebrow: 'Trusted team branch',
+    risk: 'danger',
+    summary:
+      'A two-player loadout for the 10 KC branch you already know. Treat scrolls and crown pieces as bonuses; the first win condition is a clean, repeatable exit.',
+    requirements: [
+      'Agree on roles, loot ownership and an abort call before entering',
+      'Keep a fully stocked deathbank and a fixed teleport slot',
+      'Schedule a defined KC block; do not convert a dry night into tilt',
+    ],
+    gear: [
+      {
+        id: 'titans-melee',
+        name: 'Zombie axe + dragon defender',
+        slot: 'Melee core',
+        note: 'Your known melee anchor for the close-range phase.',
+        checklistId: 'gear-zombie-axe',
+      },
+      {
+        id: 'titans-ranged',
+        name: 'RCB + Karil/green d’hide',
+        slot: 'Ranged core',
+        note: 'Keep the ranged switch compact and use the ammo you can replace.',
+        checklistId: 'gear-rcb',
+      },
+      {
+        id: 'titans-magic',
+        name: 'Warped sceptre + Mystic/Ahrim hood',
+        slot: 'Magic utility',
+        note: 'Use for magic checks and movement casting; do not overgear the switch.',
+        checklistId: 'gear-warped-sceptre',
+      },
+      {
+        id: 'titans-slayer',
+        name: 'Imbued Slayer helm',
+        slot: 'Head',
+        note: 'Useful accuracy/defence anchor when the task bonus applies.',
+        checklistId: 'gear-black-mask',
+      },
+    ],
+    inventory: [
+      {
+        id: 'titans-food',
+        name: 'High-healing food',
+        slot: 'Food',
+        quantity: '12–18',
+        note: 'Bring enough to survive a messy duo without turning the bank trip into a crisis.',
+        checklistId: 'supply-food',
+      },
+      {
+        id: 'titans-prayer',
+        name: 'Prayer potions / restores',
+        slot: 'Prayer',
+        quantity: '6–10',
+        note: 'Use your actual KC data to tune the ratio after each short block.',
+        checklistId: 'supply-prayer-potions',
+      },
+      {
+        id: 'titans-brews',
+        name: 'Emergency brews / combo food',
+        slot: 'Emergency',
+        quantity: '2–4',
+        note: 'Only if already banked; do not make this branch consume raid-only supplies.',
+        checklistId: 'supply-brews',
+      },
+      {
+        id: 'titans-teleport',
+        name: 'Teleport + stamina dose',
+        slot: 'Safety',
+        quantity: '1–2',
+        note: 'Leave with the same route you used in your successful 10 KC.',
+        checklistId: 'supply-teleports',
+      },
+    ],
+    abort:
+      'A duo partner disconnect, role confusion, or a failed exit call ends the trip. Royal Titans are a bridge for prayer upgrades, never a reason to risk the account on tilt.',
+    source: 'https://oldschool.runescape.wiki/w/Royal_Titans',
+  },
+  {
+    id: 'loadout-mm2',
+    name: 'MM2 / Glough',
+    eyebrow: 'Quest boss gate',
+    risk: 'danger',
+    summary:
+      'Stage the quest fight as a deliberate one-off. Your warped sceptre and RCB are useful, but the route improves sharply after Ancient Magicks, better ranged armour and a stocked potion bank.',
+    requirements: [
+      '69 Slayer and 70 Crafting plus the full MM2 prerequisite chain',
+      'Read the boss arena mechanics and safe logout points before entering',
+      'Use a private banked death setup; no irreplaceable item comes on a first attempt',
+    ],
+    gear: [
+      {
+        id: 'mm2-ranged',
+        name: 'RCB + best ranged armour',
+        slot: 'Ranged core',
+        note: 'Karil/green d’hide works while the Eclipse package is incomplete.',
+        checklistId: 'gear-rcb',
+      },
+      {
+        id: 'mm2-magic',
+        name: 'Warped sceptre / Ancient Magicks',
+        slot: 'Magic core',
+        note: 'Ancient spellbook access is the larger milestone; sceptre remains the cheap powered backup.',
+        checklistId: 'gear-warped-sceptre',
+      },
+      {
+        id: 'mm2-helm',
+        name: 'Imbued Slayer helm or Karil coif',
+        slot: 'Head',
+        note: 'Pick the helm that matches the style carrying the fight.',
+        checklistId: 'gear-black-mask',
+      },
+      {
+        id: 'mm2-defence',
+        name: 'Verac brassard / best defensive body',
+        slot: 'Defence option',
+        note: 'Use the defensive option that lets you make fewer emergency decisions.',
+        checklistId: 'gear-veracs-brassard',
+      },
+    ],
+    inventory: [
+      {
+        id: 'mm2-super-sets',
+        name: 'Super combat + ranging potions',
+        slot: 'Boosts',
+        quantity: '2–4 each',
+        note: 'Bring more than a speedrun setup; this is a quest completion inventory.',
+        checklistId: 'supply-combat-potions',
+      },
+      {
+        id: 'mm2-prayer',
+        name: 'Prayer potions / restores',
+        slot: 'Prayer',
+        quantity: '6–10',
+        note: 'Leave a reserve in the bank for a second attempt instead of using everything once.',
+        checklistId: 'supply-prayer-potions',
+      },
+      {
+        id: 'mm2-food',
+        name: 'High-healing food',
+        slot: 'Food',
+        quantity: '12–18',
+        note: 'Use food you can sustainably replace from Fishing/Cooking pivots.',
+        checklistId: 'supply-food',
+      },
+      {
+        id: 'mm2-teleport',
+        name: 'Emergency teleport + antidote',
+        slot: 'Safety',
+        quantity: '1 each',
+        note: 'Put both in fixed slots and confirm the quest instance rules before starting.',
+        checklistId: 'supply-teleports',
+      },
+    ],
+    abort:
+      'If the quest instance behaves differently than expected, leave and re-stage. A completed quest is worth more than a single rushed inventory.',
+    source: 'https://oldschool.runescape.wiki/w/Monkey_Madness_II',
+  },
+  {
+    id: 'loadout-cox',
+    name: 'CoX calibration',
+    eyebrow: 'Known-mechanics raid',
+    risk: 'status-safe',
+    summary:
+      'Use your roughly 300 main-account clears as a mechanics advantage while learning this account’s supplies, switches and conservative exits. Start with a trusted 3–5 player team.',
+    requirements: [
+      'First run is a supply calibration, not a speed test',
+      'Fixed teleport slot, disconnect plan and a pre-agreed abort call',
+      'Use warped sceptre now; add Moon gear, prayer scrolls and trident as they arrive',
+    ],
+    gear: [
+      {
+        id: 'cox-melee',
+        name: 'Zombie axe + dragon defender + fighter torso',
+        slot: 'Melee switch',
+        note: 'Functional melee core; do not wait for Bandos.',
+        checklistId: 'gear-zombie-axe',
+      },
+      {
+        id: 'cox-ranged',
+        name: 'RCB + best ranged armour',
+        slot: 'Ranged switch',
+        note: 'Eclipse atlatl/package is the practical next upgrade, not a hard gate.',
+        checklistId: 'gear-rcb',
+      },
+      {
+        id: 'cox-magic',
+        name: 'Warped sceptre + Mystic/Ahrim hood',
+        slot: 'Magic switch',
+        note: 'Enough for prepared early team CoX while trident is still a Slayer goal.',
+        checklistId: 'gear-warped-sceptre',
+      },
+      {
+        id: 'cox-fire-cape',
+        name: 'Fire cape',
+        slot: 'Melee cape',
+        note: 'Complete Fight Caves before taking the first calibration trip.',
+        checklistId: 'gear-fire-cape',
+      },
+    ],
+    inventory: [
+      {
+        id: 'cox-potions',
+        name: 'Prayer / combat / ranging potions',
+        slot: 'Potions',
+        quantity: 'Team-tuned',
+        note: 'Bring the first run’s bank assumptions, then record actual consumption.',
+        checklistId: 'supply-prayer-potions',
+      },
+      {
+        id: 'cox-food',
+        name: 'High-healing food',
+        slot: 'Food',
+        quantity: 'Team-tuned',
+        note: 'Avoid a brittle inventory; surplus food is cheaper than a forced exit.',
+        checklistId: 'supply-food',
+      },
+      {
+        id: 'cox-runes',
+        name: 'Thrall / utility runes',
+        slot: 'Runes',
+        quantity: '1 raid batch',
+        note: 'Greater thralls are a later upgrade; warped sceptre keeps today’s plan cheap.',
+        checklistId: 'supply-runes',
+      },
+      {
+        id: 'cox-teleport',
+        name: 'Emergency teleport',
+        slot: 'Safety',
+        quantity: '1',
+        note: 'Keep it in the same slot and call the exit before supplies are critical.',
+        checklistId: 'supply-teleports',
+      },
+    ],
+    abort:
+      'End the raid when the known team protocol breaks, supplies are materially below plan or a disconnect changes the risk. Early CoX is the route milestone; speed comes later.',
+    source: 'https://oldschool.runescape.wiki/w/Chambers_of_Xeric/Strategies',
+  },
+];
+
+export const supplyPlans: SupplyPlan[] = [
+  {
+    id: 'supply-ranarr-seeds',
+    name: 'Ranarr seeds',
+    category: 'Seed',
+    priority: 'Now',
+    use: 'Prayer potions for Moons, Fight Caves, Slayer and early raids.',
+    bestSource:
+      'Farming contracts on every cooldown, then plant every herb run. Keep the seed pipeline moving before a bossing block.',
+    backupSource:
+      'Slayer task drops and seed packs; targeted Master Farmer thieving is a later option if you choose to train Thieving.',
+    routeValue: 'Prayer uptime + safer boss attempts',
+    checklistId: 'supply-ranarr-seeds',
+    source: 'https://oldschool.runescape.wiki/w/Ranarr_seed',
+  },
+  {
+    id: 'supply-ranarr-weeds',
+    name: 'Ranarr weeds',
+    category: 'Herb',
+    priority: 'Now',
+    use: 'Prayer potion production; protect the herb bank for dangerous content.',
+    bestSource:
+      'Herb runs with ultracompost and disease protection where practical; your 69 Farming makes this the best low-cost engine.',
+    backupSource:
+      'Slayer drops, herb patches from contracts and Kingdom supplies.',
+    routeValue: 'Prayer potion reserve',
+    checklistId: 'supply-ranarr-weeds',
+    source: 'https://oldschool.runescape.wiki/w/Ranarr_weed',
+  },
+  {
+    id: 'supply-snapdragon-seeds',
+    name: 'Snapdragon seeds',
+    category: 'Seed',
+    priority: 'Core',
+    use: 'Restores and super restores once the PvM bank grows.',
+    bestSource:
+      'Farming contracts and high-level Slayer/PvM seed drops; do not force a costly method just to skip ranarrs.',
+    backupSource: 'Birdhouse/seed packs and passive boss loot.',
+    routeValue: 'Raid restore depth',
+    checklistId: 'supply-snapdragon-seeds',
+    source: 'https://oldschool.runescape.wiki/w/Snapdragon_seed',
+  },
+  {
+    id: 'supply-herb-contracts',
+    name: 'Herb + seed contract cycle',
+    category: 'Herb',
+    priority: 'Now',
+    use: 'The renewable source layer behind prayer, combat and raid potions.',
+    bestSource:
+      'Complete medium/hard contracts between boss sessions; use the reward seed packs to backfill the next run.',
+    backupSource:
+      'One bounded Farming Guild session when a grind starts to feel stale.',
+    routeValue: 'Herblore 57 → 65 → 78',
+    checklistId: 'supply-contract-cycle',
+    source: 'https://oldschool.runescape.wiki/w/Farming_contract',
+  },
+  {
+    id: 'supply-teak-mahogany',
+    name: 'Teak / mahogany logs',
+    category: 'Log',
+    priority: 'Core',
+    use: 'Mahogany Homes, Construction levels and future house utility.',
+    bestSource:
+      'Keep Miscellania producing hardwoods while doing low-attention Woodcutting only when you need a bounded skilling pivot.',
+    backupSource:
+      'Fossil Island hardwood patches; bank a defined stack instead of chasing 99.',
+    routeValue: 'Construction 51 → 70 → 83/84',
+    checklistId: 'supply-hardwood-logs',
+    source: 'https://oldschool.runescape.wiki/w/Kingdom_of_Miscellania',
+  },
+  {
+    id: 'supply-yew-magic-logs',
+    name: 'Yew / magic logs',
+    category: 'Log',
+    priority: 'Later',
+    use: 'Fletching, alchs, quest requirements and ranged ammunition support.',
+    bestSource:
+      'Passive Kingdom logs plus a short Woodcutting deposit when the quest checklist calls for them.',
+    backupSource:
+      'Slayer and PvM drops; do not turn this into a bank-filler grind early.',
+    routeValue: 'Quest prep + fletching runway',
+    checklistId: 'supply-fletching-logs',
+    source: 'https://oldschool.runescape.wiki/w/Maple_log',
+  },
+  {
+    id: 'supply-snape-grass',
+    name: 'Snape grass',
+    category: 'Secondary',
+    priority: 'Core',
+    use: 'Prayer potion secondaries and several quest/raid potion batches.',
+    bestSource:
+      'Farm Snape grass alongside herb runs; use a bounded pickup route only when the bank is actually low.',
+    backupSource:
+      'Slayer/PvM drops and purchased packs when time is more valuable than GP.',
+    routeValue: 'Potion production without a shop dependency',
+    checklistId: 'supply-snape-grass',
+    source: 'https://oldschool.runescape.wiki/w/Snape_grass',
+  },
+  {
+    id: 'supply-limpwurt-roots',
+    name: 'Limpwurt roots',
+    category: 'Secondary',
+    priority: 'Core',
+    use: 'Strength potions, super restores and combat batch depth.',
+    bestSource:
+      'Plant limpwurt seeds in allotment runs with your herb cycle; harvest while checking patches.',
+    backupSource:
+      'Hill giants, Slayer drops and a small wilderness pickup only if already safe/preflighted.',
+    routeValue: 'Combat potion independence',
+    checklistId: 'supply-limpwurt-roots',
+    source: 'https://oldschool.runescape.wiki/w/Limpwurt_root',
+  },
+  {
+    id: 'supply-food',
+    name: 'High-healing food',
+    category: 'Food',
+    priority: 'Now',
+    use: 'Every dangerous quest, boss and first raid calibration.',
+    bestSource:
+      'Karambwans or your highest sustainable Fishing/Cooking route; fish in bounded batches between PvM sessions.',
+    backupSource:
+      'Fishing Guild/tempoross-style side sessions or existing Slayer food drops.',
+    routeValue: 'Death margin + smoother sessions',
+    checklistId: 'supply-food',
+    source: 'https://oldschool.runescape.wiki/w/Karambwan',
+  },
+  {
+    id: 'supply-runes',
+    name: 'Chaos / death / blood runes',
+    category: 'Rune',
+    priority: 'Core',
+    use: 'Warped sceptre support, Ancient Magicks, thralls and raid utility.',
+    bestSource:
+      'Guardians of the Rift for broad rune depth; buy only the gap-fill runes that match the next quest or boss block.',
+    backupSource:
+      'Barrows, Slayer drops and shop runs when the account already has the GP.',
+    routeValue: 'DT1 → burst tasks → raids',
+    checklistId: 'supply-runes',
+    source: 'https://oldschool.runescape.wiki/w/Guardians_of_the_Rift',
+  },
+  {
+    id: 'supply-ammo',
+    name: 'Broad / enchanted bolts',
+    category: 'Ammo',
+    priority: 'Now',
+    use: 'RCB, Fight Caves, quest bosses and early CoX ranged switches.',
+    bestSource:
+      'Buy Broader Fletching before cosmetic rewards, then fletch task drops and smith/craft only the quantity for the next block.',
+    backupSource:
+      'Slayer/PvM bolt drops; use the supply tab to set a stop point before making a giant stockpile.',
+    routeValue: 'RCB stays relevant until Eclipse/Bowfa',
+    checklistId: 'supply-ammo',
+    source: 'https://oldschool.runescape.wiki/w/Broad_bolts',
+  },
+  {
+    id: 'supply-combat-potions',
+    name: 'Super combat / ranging potions',
+    category: 'Herb',
+    priority: 'Now',
+    use: 'Reliable boosts for Royal Titans, quest bosses and first CoX runs.',
+    bestSource:
+      'Train Herblore through the herb bank you are already building; make only the next two bossing batches.',
+    backupSource:
+      'Slayer drops and controlled shop runs when a quest is ready to be completed.',
+    routeValue: 'Herblore gate + combat consistency',
+    checklistId: 'supply-combat-potions',
+    source: 'https://oldschool.runescape.wiki/w/Super_combat_potion',
+  },
+  {
+    id: 'supply-prayer-potions',
+    name: 'Prayer potions / restores',
+    category: 'Herb',
+    priority: 'Now',
+    use: 'The minimum supply floor for every dangerous branch in this roadbook.',
+    bestSource:
+      'Ranarr herb runs + Snape grass + contracts; use a bank threshold to trigger a non-combat farming pivot.',
+    backupSource:
+      'Barrows/Slayer/PvM drops and restores when the account has surplus secondaries.',
+    routeValue: 'Protects every death-risk session',
+    checklistId: 'supply-prayer-potions',
+    source: 'https://oldschool.runescape.wiki/w/Prayer_potion',
+  },
+  {
+    id: 'supply-brews',
+    name: 'Brews / combo food',
+    category: 'Food',
+    priority: 'Later',
+    use: 'Royal Titans progression and higher-level raids after the core herb engine is stable.',
+    bestSource:
+      'Build from PvM secondaries and Herblore milestones; do not divert the early bank from prayer potions.',
+    backupSource:
+      'Use regular food/restores for early practice until the inventory math is proven.',
+    routeValue: 'Higher raid comfort ceiling',
+    checklistId: 'supply-brews',
+    source: 'https://oldschool.runescape.wiki/w/Saradomin_brew',
+  },
+  {
+    id: 'supply-teleports',
+    name: 'Emergency teleports',
+    category: 'Rune',
+    priority: 'Now',
+    use: 'Fixed-slot abort tool for every dangerous quest, boss and raid.',
+    bestSource:
+      'Maintain a dedicated stack of house/escape teleports and restock before the next session, not after it begins.',
+    backupSource:
+      'Runes for a direct teleport only when the spellbook and quest state are confirmed.',
+    routeValue: 'HCIM exit discipline',
+    checklistId: 'supply-teleports',
+    source: 'https://oldschool.runescape.wiki/w/Teleport_to_house',
+  },
+];
+
 export const gearItems: GearItem[] = [
   {
     id: 'gear-fighter-torso',
