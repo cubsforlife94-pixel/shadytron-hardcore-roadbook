@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -83,6 +83,25 @@ import {
 } from '@/lib/roadmap-data';
 
 const STORAGE_KEY = 'shadytron-roadbook-v1';
+const HISCORE_CACHE_KEY = 'shadytron-roadbook-hiscores-v1';
+const HISCORE_REFRESH_MS = 30 * 60 * 1000;
+const HISCORE_VISIBILITY_REFRESH_MS = 5 * 60 * 1000;
+
+type LiveHiscoreSkill = {
+  id: number;
+  name: string;
+  rank: number;
+  level: number;
+  xp: number;
+};
+
+type LiveHiscores = {
+  name: string;
+  fetchedAt: string;
+  skills: LiveHiscoreSkill[];
+};
+
+type HiscoreStatus = 'idle' | 'refreshing' | 'ready' | 'error';
 
 const riskMeta: Record<
   Risk,
@@ -508,6 +527,14 @@ function formatGpPerXp(value: number) {
   return `≈ ${value} gp/xp`;
 }
 
+function formatSyncTime(timestamp: number | null) {
+  if (!timestamp) return 'Waiting for first sync';
+  return new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(timestamp);
+}
+
 export default function Home() {
   const [completed, setCompleted] = useState<Set<string>>(
     () => new Set(confirmedDefaults),
@@ -533,6 +560,98 @@ export default function Home() {
   );
   const [supplyCategory, setSupplyCategory] =
     useState<(typeof supplyCategories)[number]>('All');
+  const [liveHiscores, setLiveHiscores] = useState<LiveHiscores | null>(null);
+  const [hiscoreLastFetchedAt, setHiscoreLastFetchedAt] = useState<number | null>(
+    null,
+  );
+  const [hiscoreStatus, setHiscoreStatus] =
+    useState<HiscoreStatus>('idle');
+  const [hiscoreError, setHiscoreError] = useState<string | null>(null);
+  const hiscoreLastFetchedAtRef = useRef<number | null>(null);
+
+  const refreshHiscores = async () => {
+    setHiscoreStatus('refreshing');
+    setHiscoreError(null);
+
+    try {
+      const response = await fetch('/api/hiscores', { cache: 'no-store' });
+      const payload = (await response.json()) as LiveHiscores & {
+        error?: string;
+      };
+
+      if (!response.ok || !payload?.name || !Array.isArray(payload.skills)) {
+        throw new Error(payload?.error ?? 'Hiscores are unavailable right now.');
+      }
+
+      const fetchedAt = Date.parse(payload.fetchedAt);
+      setLiveHiscores(payload);
+      const syncTime = Number.isFinite(fetchedAt) ? fetchedAt : Date.now();
+      hiscoreLastFetchedAtRef.current = syncTime;
+      setHiscoreLastFetchedAt(syncTime);
+      setHiscoreStatus('ready');
+      window.localStorage.setItem(
+        HISCORE_CACHE_KEY,
+        JSON.stringify({ payload, savedAt: Date.now() }),
+      );
+    } catch (error) {
+      setHiscoreStatus('error');
+      setHiscoreError(
+        error instanceof Error ? error.message : 'Hiscores are unavailable right now.',
+      );
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    try {
+      const cached = window.localStorage.getItem(HISCORE_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as {
+          payload?: LiveHiscores;
+          savedAt?: number;
+        };
+        if (
+          parsed.payload?.name &&
+          Array.isArray(parsed.payload.skills) &&
+          typeof parsed.savedAt === 'number'
+        ) {
+          setLiveHiscores(parsed.payload);
+          hiscoreLastFetchedAtRef.current = parsed.savedAt;
+          setHiscoreLastFetchedAt(parsed.savedAt);
+          setHiscoreStatus('ready');
+        }
+      }
+    } catch {
+      // A blocked/corrupt hiscore cache should never block the roadbook.
+    }
+
+    const sync = () => {
+      if (!cancelled) void refreshHiscores();
+    };
+
+    sync();
+    const interval = window.setInterval(sync, HISCORE_REFRESH_MS);
+    const onVisibilityChange = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        (!hiscoreLastFetchedAtRef.current ||
+          Date.now() - hiscoreLastFetchedAtRef.current >
+            HISCORE_VISIBILITY_REFRESH_MS)
+      ) {
+        sync();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+    // The refresh cadence is intentionally fixed for the lifetime of the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     try {
@@ -690,17 +809,40 @@ export default function Home() {
     .filter((item) => !moonsItems.some((moon) => moon.id === item.id))
     .filter((item) => gearFilter === 'All' || item.style === gearFilter);
 
+  const liveLevelByName = useMemo(
+    () =>
+      new Map(
+        (liveHiscores?.skills ?? []).map((skill) => [
+          skill.name.toLowerCase(),
+          skill.level,
+        ]),
+      ),
+    [liveHiscores],
+  );
+  const liveSkillPlans = useMemo(
+    () =>
+      skillPlans.map((skill) => ({
+        ...skill,
+        current: liveLevelByName.get(skill.name.toLowerCase()) ?? skill.current,
+      })),
+    [liveLevelByName],
+  );
   const selectedSkill =
-    skillPlans.find((skill) => skill.id === selectedSkillId) ?? skillPlans[0];
+    liveSkillPlans.find((skill) => skill.id === selectedSkillId) ??
+    liveSkillPlans[0];
   const selectedSkillMethod =
     selectedSkill.methods.find(
       (method) => method.id === selectedSkillMethodId,
     ) ??
     selectedSkill.methods.find((method) => method.recommended) ??
     selectedSkill.methods[0];
+  const effectiveSkillTarget = Math.max(
+    selectedSkill.current,
+    Math.min(99, skillTarget),
+  );
   const skillXpRemaining = Math.max(
     0,
-    xpForLevel(skillTarget) - xpForLevel(selectedSkill.current),
+    xpForLevel(effectiveSkillTarget) - xpForLevel(selectedSkill.current),
   );
   const skillHours = skillXpRemaining / selectedSkillMethod.xpPerHour;
   const skillCost = skillXpRemaining * selectedSkillMethod.gpPerXp;
@@ -708,10 +850,17 @@ export default function Home() {
     100,
     Math.round(
       (xpForLevel(selectedSkill.current) /
-        Math.max(xpForLevel(skillTarget), 1)) *
+        Math.max(xpForLevel(effectiveSkillTarget), 1)) *
         100,
     ),
   );
+  const liveOverall = liveHiscores?.skills.find(
+    (skill) => skill.name.toLowerCase() === 'overall',
+  );
+  const liveAccountStats = accountStats.map(([name, level]) => [
+    name,
+    liveLevelByName.get(name.toLowerCase()) ?? level,
+  ] as const);
   const selectedSlayerMaster =
     slayerMasters.find((master) => master.id === slayerMasterId) ??
     slayerMasters[0];
@@ -726,7 +875,7 @@ export default function Home() {
   );
 
   const selectSkill = (id: string) => {
-    const skill = skillPlans.find((item) => item.id === id);
+    const skill = liveSkillPlans.find((item) => item.id === id);
     if (!skill) return;
     setSelectedSkillId(skill.id);
     setSkillTarget(skill.target);
@@ -841,7 +990,7 @@ export default function Home() {
                   variant="outline"
                   className="h-6 border-white/15 bg-black/35 text-white/85 backdrop-blur-md"
                 >
-                  1,666 total
+                  {(liveOverall?.level ?? 1666).toLocaleString()} total
                 </Badge>
                 <Badge
                   variant="outline"
@@ -851,8 +1000,10 @@ export default function Home() {
                 </Badge>
               </div>
               <p className="max-w-sm rounded-xl border border-white/10 bg-black/35 px-3 py-2 text-[11px] leading-5 text-white/70 backdrop-blur-md">
-                Official snapshot · 31 Aug 2026. Quests, bank and individual log
-                slots remain manually tracked.
+                {liveHiscores
+                  ? `Live hiscores synced ${formatSyncTime(hiscoreLastFetchedAt)}. `
+                  : 'Official snapshot is loading. '}
+                Quests, bank and individual log slots remain manually tracked.
               </p>
             </div>
           </figure>
@@ -1489,7 +1640,7 @@ export default function Home() {
                   gear and world conditions.
                 </p>
                 <div className="mt-5 space-y-1.5">
-                  {skillPlans.map((skill) => {
+                  {liveSkillPlans.map((skill) => {
                     const active = selectedSkill.id === skill.id;
                     return (
                       <button
@@ -1525,15 +1676,40 @@ export default function Home() {
                         variant="outline"
                         className="border-white/10 bg-white/[.025] text-muted-foreground"
                       >
-                        Account snapshot · 31 Aug 2026
+                        {hiscoreStatus === 'ready'
+                          ? `Live hiscores · ${formatSyncTime(hiscoreLastFetchedAt)}`
+                          : 'Live hiscores · connecting'}
                       </Badge>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        onClick={() => void refreshHiscores()}
+                        disabled={hiscoreStatus === 'refreshing'}
+                        className="h-6 rounded-lg border-white/10 bg-white/[.025] px-2 text-[10px] text-muted-foreground hover:text-foreground"
+                      >
+                        <RotateCcw
+                          className={
+                            hiscoreStatus === 'refreshing' ? 'animate-spin' : ''
+                          }
+                        />{' '}
+                        Sync now
+                      </Button>
                     </div>
                     <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em]">
                       {selectedSkill.name} training plan
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {selectedSkill.current} → {skillTarget} ·{' '}
+                      {selectedSkill.current} → {effectiveSkillTarget} ·{' '}
                       {selectedSkill.targetLabel}
+                    </p>
+                    <p
+                      className={`mt-2 text-[10px] ${hiscoreStatus === 'error' ? 'text-amber-200' : 'text-muted-foreground'}`}
+                      aria-live="polite"
+                    >
+                      {hiscoreStatus === 'error'
+                        ? `Auto-sync paused: ${hiscoreError ?? 'try again shortly.'}`
+                        : 'Auto-syncs every 30 minutes while this page is open.'}
                     </p>
                   </div>
                   <div className="grid size-16 shrink-0 place-items-center rounded-full border border-primary/25 bg-primary/[.06] font-mono text-xs text-primary">
@@ -1593,11 +1769,11 @@ export default function Home() {
                       <Button
                         key={`${target}-${index}`}
                         variant={
-                          skillTarget === target ? 'secondary' : 'outline'
+                          effectiveSkillTarget === target ? 'secondary' : 'outline'
                         }
                         onClick={() => setSkillTarget(target)}
                         className={`h-9 rounded-xl px-3 text-xs ${
-                          skillTarget === target
+                          effectiveSkillTarget === target
                             ? 'bg-primary/15 text-primary hover:bg-primary/20'
                             : 'border-white/10 bg-white/[.025]'
                         }`}
@@ -1610,7 +1786,7 @@ export default function Home() {
                       type="number"
                       min={selectedSkill.current}
                       max={99}
-                      value={skillTarget}
+                      value={effectiveSkillTarget}
                       onChange={(event) => {
                         const next = Number(event.target.value);
                         if (Number.isFinite(next)) {
@@ -2855,15 +3031,19 @@ export default function Home() {
                           variant="outline"
                           className="border-white/10 bg-white/[.025] text-muted-foreground"
                         >
-                          Official snapshot · 31 Aug 2026
+                          {hiscoreStatus === 'ready'
+                            ? `Live hiscores · ${formatSyncTime(hiscoreLastFetchedAt)}`
+                            : 'Live hiscores · connecting'}
                         </Badge>
                       </div>
                       <h3 className="mt-4 text-3xl font-semibold tracking-[-0.04em]">
                         Shadytron
                       </h3>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        Combat 98 · Total level 1,666 · 27,192,499 XP · HCIM
-                        rank 30,735
+                        Combat 98 · Total level{' '}
+                        {(liveOverall?.level ?? 1666).toLocaleString()} ·{' '}
+                        {formatNumber(liveOverall?.xp ?? 27192499)} XP · HCIM
+                        rank {formatNumber(liveOverall?.rank ?? 30735)}
                       </p>
                     </div>
                     <a
@@ -2877,7 +3057,7 @@ export default function Home() {
                   </div>
 
                   <div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-                    {accountStats.map(([name, level]) => (
+                    {liveAccountStats.map(([name, level]) => (
                       <div
                         key={name}
                         className="rounded-xl border border-white/7 bg-black/10 px-3 py-3 text-center"
