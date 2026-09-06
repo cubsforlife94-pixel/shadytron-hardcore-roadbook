@@ -16,7 +16,7 @@ import {
   Flag,
   Gauge,
   LockKeyhole,
-  Map,
+  Map as MapIcon,
   PackageCheck,
   RotateCcw,
   ShieldAlert,
@@ -1068,7 +1068,7 @@ export default function Home() {
                       onClick={() => openTab('route')}
                       className="h-10 rounded-xl border-white/10 bg-white/[.025]"
                     >
-                      View phase <Map />
+                      View phase <MapIcon />
                     </Button>
                   </div>
                 </div>
@@ -1159,7 +1159,7 @@ export default function Home() {
             </div>
             <TabsList className="h-11 w-full justify-start overflow-x-auto rounded-xl border border-white/8 bg-white/[.035] p-1 lg:w-auto">
               <TabsTrigger value="route" className="h-9 min-w-24 px-3">
-                <Map /> Route
+                <MapIcon /> Route
               </TabsTrigger>
               <TabsTrigger value="pivots" className="h-9 min-w-24 px-3">
                 <Shuffle /> Pivots
